@@ -1,0 +1,2 @@
+
+from Rigid import RigidTransformationSSD
