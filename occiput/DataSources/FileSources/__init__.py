@@ -30,7 +30,7 @@ from LookupTable import load_freesurfer_lut_file
 from Web import download_Dropbox
 
 from vNAV import load_vnav_mprage
-from MR_motion_sensor import load_motion_sensor_data
+from MR_motion_sensors import load_motion_sensor_data
 
 from Physiology import Brain_PET_Physiology, Biograph_mMR_Physiology
 

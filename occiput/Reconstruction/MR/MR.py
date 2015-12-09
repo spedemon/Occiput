@@ -21,8 +21,8 @@ from occiput.DataSources.FileSources import import_nifti
 from DisplayNode import DisplayNode 
 
 # Import other modules
+from PIL import ImageDraw
 from PIL import Image as PIL 
-import ImageDraw
 from numpy import isscalar, linspace, int32, uint32, ones, zeros, pi, float32, where, ndarray, nan, inf, exp, asarray, complex64, complex128, complex, abs, angle, real, imag
 from numpy.fft import fftn, ifftn, fft2, ifft2, fftshift, ifftshift
 from numpy.random import randint 

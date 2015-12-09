@@ -17,7 +17,7 @@ from glob import glob
 
 setup(
     name='occiput',
-    version='0.4.0',
+    version='0.4.4',
     author='Stefano Pedemonte',
     author_email='stefano.pedemonte@gmail.com',
     packages=['occiput', 
@@ -39,6 +39,7 @@ setup(
               'occiput.DataSources.FileSources', 
               'occiput.Visualization',
               ],
+    package_data={'occiput': ['Data/*.pdf','Data/*.png','Data/*.jpg','Data/*.svg','Data/*.nii','Data/*.dcm','Data/*.h5','Data/*.txt','Data/*.dat']},
     scripts=[],
     url='http://www.occiput.io/',
     license='LICENSE.txt',

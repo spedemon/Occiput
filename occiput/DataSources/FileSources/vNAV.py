@@ -8,7 +8,7 @@
 
 __all__ = ['vNAV_MPRage','load_vnav_mprage'] 
 
-import Image 
+from PIL import Image 
 from occiput.Core import Image3D, Transform_Affine 
 import numpy 
 import nibabel 

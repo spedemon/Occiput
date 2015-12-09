@@ -19,20 +19,29 @@
 # with a flag that sets the type: sparse or non-sparse. The ray-tracer knows how to handle the projection data object.  
 
 
-
+import occiput 
 from occiput.Visualization import ipy_table, has_ipy_table, svgwrite, has_svgwrite 
 from occiput.Core.Print import rad_to_deg, deg_to_rad, array_to_string
 from occiput.Core.NiftyPy_wrap import PET_compress_projection, PET_uncompress_projection, PET_initialize_compression_structure 
 
 import h5py 
 import copy
+import os
+import inspect 
 from numpy import isscalar, linspace, int32, uint32, ones, zeros, pi, sqrt, float32, float64, where, ndarray, nan
 from numpy import inf, asarray, concatenate, fromfile, maximum, exp, asfortranarray, fliplr, transpose 
 
 
 
 __all__ = ["DEFAULT_BINNING","Binning", "PET_Projection_Sparsity", "PET_Projection",
-          "PET_compress_projection", "PET_uncompress_projection", "PET_initialize_compression_structure"] 
+          "PET_compress_projection", "PET_uncompress_projection", "PET_initialize_compression_structure","display_PET_Projection_geometry"] 
+
+    
+def display_PET_Projection_geometry(): 
+    filename = inspect.getfile(occiput).strip("__init__.pyc")+"Data"+os.sep+"occiput_ray_tracer_PET.png"
+    from IPython.display import Image
+    img = Image(filename=filename, width=1000) 
+    return img 
 
 
 
@@ -45,6 +54,7 @@ DEFAULT_BINNING = {      "n_axial":                120,
                          "size_v":                 256.00,
                          "n_u":                    128,
                          "n_v":                    128,   }
+
 
 
 class Binning(): 
@@ -141,6 +151,9 @@ class Binning():
         self._make_svg()
         return self._svg_string    
 
+    def display_geometry(self):
+        return display_PET_Projection_geometry()
+        
 
 
 class PET_Projection_Sparsity(): 
@@ -206,6 +219,8 @@ class PET_Projection_Sparsity():
             raise Exception("Binary operation must be with another object of the same type - PET_Projection_Sparsity. ")
         print "This is not implemented, it should be implemented at low level. "
 
+    def display_geometry(self):
+        return display_PET_Projection_geometry()
 
 
 class PET_Projection(): 
@@ -507,4 +522,6 @@ class PET_Projection():
         out.data = (other+EPS)/(out.data+EPS) 
         return out
     
+    def display_geometry(self):
+        return display_PET_Projection_geometry()
 

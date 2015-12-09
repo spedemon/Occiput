@@ -37,6 +37,7 @@ from occiput.Core import Transform_Identity, Transform_6DOF, Transform_Affine, T
 
 from occiput.Reconstruction.PET.PET_projection import PET_Projection, Binning, PET_Projection_Sparsity, PET_compress_projection
 from occiput.Reconstruction.PET.PET_projection import PET_uncompress_projection, PET_initialize_compression_structure
+from occiput.Reconstruction.PET.PET_projection import display_PET_Projection_geometry
 from occiput.Reconstruction.PET.PET_raytracer import ProjectionParameters, BackprojectionParameters
 from occiput.Reconstruction.PET.PET_raytracer import PET_project_compressed, PET_backproject_compressed
 from occiput.Reconstruction.PET.PET_subsets import SubsetGenerator 
@@ -1168,6 +1169,9 @@ class PET_Static_Scan():
         binning.N_v = 256
         projection = PET_Projection(binning, proj, offsets, locations)
         return projection.uncompress_self() 
+
+    def display_geometry(self):
+        return display_PET_Projection_geometry()  
 
     def __repr__(self): 
         s = "Static PET acquisition:  \n" 

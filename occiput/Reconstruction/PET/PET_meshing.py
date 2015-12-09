@@ -9,8 +9,8 @@ __all__ = ["Michelogram"]
 
 
 from occiput.Visualization import ipy_table, has_ipy_table, svgwrite, has_svgwrite 
+from PIL import ImageDraw
 from PIL import Image as PIL 
-import ImageDraw
 from numpy import isscalar, linspace, int32, uint32, ones, zeros, pi, sqrt, float32, float64, where, ndarray, nan
 from numpy import inf, asarray, concatenate, fromfile, maximum, exp, asfortranarray, fliplr, transpose 
 
