@@ -449,7 +449,7 @@ class PET_Projection():
         return False 
 
     def copy(self): 
-        return copy.copy(self)
+        return copy.deepcopy(self)
 
     
     # Overload math operators 

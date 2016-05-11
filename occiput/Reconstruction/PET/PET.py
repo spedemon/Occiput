@@ -433,7 +433,7 @@ class PET_Static_Scan():
                                           # way to handle this. 
                 sensitivity.data[self.prompts.data==0]=0
             else: 
-                print "Please load prompts before loading the sensitivity. " # FIXME: see comment two lines up 
+                print "Warning: If loading real scanner data, please load prompts before loading the sensitivity. Ignore this message if this is a simulation. See the source code for more info. " # FIXME: see comment two lines up 
         elif filetype is "mat": 
             print "Sensitivity from Matlab not yet implemented. All is ready, please spend 15 minutes and implement. "
             return 
