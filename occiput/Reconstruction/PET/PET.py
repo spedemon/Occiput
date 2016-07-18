@@ -561,7 +561,7 @@ class PET_Static_Scan():
             time_range_1 = time_range_ms[1]
         else: 
             time_range_1 = scan_duration  
-        time_bins = int32(linspace(time_range_ms[0],time_range_1,2))
+        time_bins = int32(linspace(time_range_0,time_range_1,2))
 
         # Display information 
         print_debug(" - Number of packets:    %d       "%n_packets )
@@ -635,12 +635,12 @@ class PET_Static_Scan():
 
     def project_attenuation(self, attenuation, unit='inv_cm', roi=None, sparsity=None, subsets_matrix=None, exponentiate=True): 
         if isinstance(attenuation,ndarray): 
-            attenuation_data = f_continuous(float32(attenuation))
+            attenuation_data = f_continuous(float32(attenuation)) 
         else: 
-            attenuation_data = f_continuous(float32(attenuation.data))
+            attenuation_data = f_continuous(float32(attenuation.data)) 
 
         if not list(attenuation_data.shape) == list(self.attenuation_shape): 
-            raise UnexpectedParameter("Attenuation must have the same shape as self.attenuation_shape")
+            raise UnexpectedParameter("Attenuation must have the same shape as self.attenuation_shape") 
 
         # By default, the center of the imaging volume is at the center of the scanner 
         if roi is None:  
@@ -787,7 +787,7 @@ class PET_Static_Scan():
         else: 
             activity_data = f_continuous(float32(activity.data))
 
-        if not list(activity_data.shape) == list(self.activity_shape): 
+        if not list(activity_data.shape)[0:3] == list(self.activity_shape)[0:3]: 
             raise UnexpectedParameter("Activity must have the same shape as self.activity_shape")
 
         # By default, the center of the imaging volume is at the center of the scanner 
@@ -978,9 +978,10 @@ class PET_Static_Scan():
             randoms = 0.0
         if scatter is None: 
             scatter = 0.0
-        if sensitivity is None: 
-            sensitivity = 1.0 
-        att_sens = sensitivity * attenuation
+        if sensitivity is None or sensitivity is 1.0: 
+            att_sens = attenuation
+        else: 
+            att_sens = sensitivity * attenuation
 
         # Compute the firt term of the gradient: backprojection of the sensitivity of the scanner
         # If it is requested that the gradient is computed using all the projection measurements, use the 
@@ -1044,7 +1045,7 @@ class PET_Static_Scan():
         #FIXME: roi = None 
         pr_activity = self.project_activity(activity, roi=None, sparsity=sparsity,
                                            subsets_matrix=subsets_matrix)*sensitivity*attenuation_projection*duration_sec*alpha
-        gradient = self.backproject_attenuation(pr_activity - prompts/ (randoms/(pr_activity+epsilon) +  scatter/(pr_activity/(sensitivity+epsilon)+epsilon) + 1 ), unit="inv_cm", roi=None, sparsity=sparisty, 
+        gradient = self.backproject_attenuation(pr_activity - prompts/ (randoms/(pr_activity+epsilon) +  scatter/(pr_activity/(sensitivity+epsilon)+epsilon) + 1 ), unit="inv_cm", roi=None, sparsity=sparsity, 
                                                 subsets_matrix=subsets_matrix)
         return gradient 
 
