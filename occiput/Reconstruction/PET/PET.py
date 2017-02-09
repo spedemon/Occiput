@@ -1302,8 +1302,8 @@ class PET_Cyclic_Scan(PET_Static_Scan):
                 pass 
         
         # Load the listmode data 
-        self.set_span(11) 
-        M = self.michelogram
+        #self.set_span(11) 
+        M = self.scanner.michelogram
         R = self.scanner.listmode.load_listmode_cyclic(data_filename, time_range_matrix_ms, self.binning, n_radial_bins, 
                                               n_angles, n_sinograms, M.span, M.segments_sizes, M.michelogram_sinogram,
                                               M.michelogram_plane, n_packets, progress_callback) 
@@ -1312,7 +1312,7 @@ class PET_Cyclic_Scan(PET_Static_Scan):
         self._dynamic = [] 
         for t in range(n_frames): 
             PET_t = PET_Static_Scan() 
-            PET_t.set_scanner(self.scanner) 
+            PET_t.set_scanner(self.scanner.model) 
             PET_t.set_binning(self.binning) 
             PET_t._load_static_measurement(t) 
             # make list of static scans
@@ -1324,7 +1324,7 @@ class PET_Cyclic_Scan(PET_Static_Scan):
             PET_t.set_activity_shape(self.activity_shape)
             PET_t.set_attenuation_size(self.activity_size)
             PET_t.set_attenuation_shape(self.activity_shape)
-            PET_t.set_span(self.michelogram.span)
+            #PET_t.set_span(self.michelogram.span)
 
         # Make a global PET_Static_Scan object 
 #        self.static = PET_Static_Scan()
