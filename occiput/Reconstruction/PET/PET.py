@@ -1312,7 +1312,7 @@ class PET_Cyclic_Scan(PET_Static_Scan):
         self._dynamic = [] 
         for t in range(n_frames): 
             PET_t = PET_Static_Scan() 
-            PET_t.set_scanner(self.scanner.model) 
+            PET_t.set_scanner(self.scanner) 
             PET_t.set_binning(self.binning) 
             PET_t._load_static_measurement(t) 
             # make list of static scans
