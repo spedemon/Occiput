@@ -25,13 +25,13 @@ with warnings.catch_warnings():
 
 
 def import_nifti(filename): 
-    nip = nipy.load_image(filename)
+    nip = nibabel.load_image(filename, mmap=False)
     return nipy_to_occiput(nip)
     
     
 def import_mask(filename, lookup_table_filename=None): 
     # Load file 
-    nip = nipy.load_image(filename)
+    nip = nibabel.load_image(filename)
     occ = nipy_to_occiput(nip)
     occ.set_mask_flag(1) 
     

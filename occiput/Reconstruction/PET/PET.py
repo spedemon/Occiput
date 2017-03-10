@@ -8,7 +8,7 @@
 # Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
 # Jan. 2015, Boston
 # June 2015, Helsinki 
-# Nov. 2015, Boston 
+# Nov. 2015 - Mar. 2017, Boston 
 
 
 # If you are looking for PET reconstruction, this is where to start. 
@@ -17,7 +17,7 @@
 # software tools for projection, backprojection and reconstruction. 
 
 
-__all__ = ['PET_Static_Scan','PET_Dynamic_Scan','PET_Cyclic_Scan','Binning','PET_Projection_Sparsity','PET_Projection'] 
+__all__ = ['PET_Static_Scan', 'PET_Multi2D_Scan', 'PET_Dynamic_Scan', 'PET_Cyclic_Scan', 'Binning', 'PET_Projection_Sparsity', 'PET_Projection', 'RigidTransform'] 
 
 
 # Set verbose level 
@@ -70,10 +70,12 @@ from interfile import Interfile
 
 
 # Import other modules
-from numpy import isscalar, linspace, int32, uint32, ones, zeros, pi, sqrt, float32, float64, where, ndarray, nan
+from numpy import isscalar, linspace, int32, uint32, ones, zeros, pi, sqrt, float32, where, ndarray, nan, tile
 from numpy import inf, asarray, concatenate, fromfile, maximum, exp, asfortranarray, fliplr, transpose 
 import os
 import h5py 
+import time
+import copy
 try: 
     import pylab
 except: 
@@ -104,12 +106,9 @@ def f_continuous(var):
 
         
 
+# FIXME: eliminate the class RigidTransform; use transformation matrices in Image3D instead, for activity and attenuation volumes. # Use Core.Transform_6DOF or Core.Transform_Affine if required, to parameterize the projector and back_projector. 
 
-
-# FIXME: eliminate the class ROI; use transformation matrices in Image3D instead, for activity and attenuation volumes. 
-# Use Core.Transform_6DOF or Core.Transform_Affine if required, to parameterize the projector and back_projector. 
-
-class ROI(): 
+class RigidTransform(): 
     """Region of Interest. Legacy! """
     def __init__(self,parameters=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0]):  
         if type(parameters) == dict:  
@@ -123,9 +122,9 @@ class ROI():
                 self.theta_y = parameters[4]
                 self.theta_z = parameters[5]
             else: 
-                raise UnknownParameter('Parameter %s specified for the construction of ROI is not compatible. '%str(parameters)) 
+                raise UnknownParameter('Parameter %s specified for the construction of RigidTransform is not compatible. '%str(parameters)) 
         else: 
-            raise UnknownParameter('Parameter %s specified for the construction of ROI is not compatible. '%str(parameters)) 
+            raise UnknownParameter('Parameter %s specified for the construction of RigidTransform is not compatible. '%str(parameters)) 
     
     def load_from_dictionary(self,dictionary):
         self.x       = dictionary['x']                           # Translation along x
@@ -136,7 +135,7 @@ class ROI():
         self.theta_z = dictionary['theta_z']                     # Rotation around z
 
     def __repr__(self):
-        s = "PET volume location (ROI): \n"
+        s = "PET volume location (RigidTransform): \n"
         s = s+" - x:             %f \n"%self.x
         s = s+" - y:             %f \n"%self.y
         s = s+" - z:             %f \n"%self.z
@@ -170,17 +169,20 @@ class PET_Static_Scan():
         self.set_scanner(Generic)                        # set scanner geometry and load interface 
         self.activity      = None                        # memoization of activity.  
         self.attenuation   = None                        # memoization of attenuation. 
+        self.attenuation_projection = None               # memoization of attenuation projection. 
         self.sensitivity   = None                        # sensitivity is a permanent parameter. 
         self.prompts       = None                        # measurement: prompts. Initialized as empty data structure.
         self.randoms       = None
         self.scatter       = None
         self._normalization = None                        # normalization volume - for all projections - memoize
         self._need_normalization_update = True            # If True, the normalization volume needs to be recomputed 
-        self.use_compression(True)
+        self.use_compression(False)
 
         self.set_transform_scanner_to_world(Transform_Identity(map_from='scanner',map_to='world'))
         
-        self._construct_ilang_model() 
+        self._time_profiling_init()
+        #self._construct_ilang_model() 
+        
 
     def set_transform_scanner_to_world(self, transform): 
         #FIXME: verify that the transform maps from 'scanner' to 'world' 
@@ -204,6 +206,82 @@ class PET_Static_Scan():
         image = Image3D(data=data, affine=T_pix_to_world, space='world')
         return image
 
+    def time_profile_projection(self):
+        return self._timing_projection
+    
+    def time_profile_backprojection(self):
+        return self._timing_backprojection
+    
+    def time_profile_reconstruction(self): 
+        return self._timing_reconstruction
+
+    def _time_profiling_init(self):
+        self._timing_reconstruction = {}
+        self._timing_projection = {
+             'T0_transfer_to_gpu': 0.0,
+             'T1_alloc': 0.0,
+             'T2_rotate': 0.0,
+             'T3_resample': 0.0,
+             'T4_integral': 0.0,
+             'T5_transfer_to_host': 0.0,
+             'T6_free': 0.0,
+             't1_project_total': 0.0,
+             't2_make_continuous': 0.0,
+             't3_prepare_compressed': 0.0,
+             't4_scale': 0.0,
+             't5_make_projection': 0.0}
+        self._timing_backprojection = {
+             'T0_transfer_to_gpu': 0.0,
+             'T1_alloc': 0.0,
+             'T2_rotate': 0.0,
+             'T3_resample': 0.0,
+             'T4_integral': 0.0,
+             'T5_transfer_to_host': 0.0,
+             'T6_free': 0.0,
+             'T7_accumulate': 0.0,
+             'T8_clear_memory': 0.0,
+             'T9_copy_texture': 0.0,
+             't1_backproject_total': 0.0,
+             't2_prepare_compressed': 0.0}
+    
+    def _time_profiling_reset(self):
+        self._timing_reconstruction["T1_project_transfer"] = 0.0
+        self._timing_reconstruction["T2_backproject_transfer"] = 0.0
+        self._timing_reconstruction["T3_project_alloc"] = 0.0
+        self._timing_reconstruction["T4_backproject_alloc"] = 0.0       
+        self._timing_reconstruction["T5_project_integral"] = 0.0
+        self._timing_reconstruction["T6_backproject_integral"] = 0.0
+        self._timing_reconstruction["T7_project_rotate"] = 0.0
+        self._timing_reconstruction["T8_backproject_rotate"] = 0.0
+        self._timing_reconstruction["T9_project_resample"] = 0.0
+        self._timing_reconstruction["T10_backproject_resample"] = 0.0
+        self._timing_reconstruction["T11_project_subsets"] = 0.0
+        self._timing_reconstruction["T12_backproject_subsets"] = 0.0
+        self._timing_reconstruction["T13_compose_projections"] = 0.0
+        self._timing_reconstruction["T14_compute_update"] = 0.0
+
+    def _time_profiling_record_projection(self):
+        p = self._timing_projection
+        self._timing_reconstruction["T1_project_transfer"] += p['T0_transfer_to_gpu']+p['T5_transfer_to_host']
+        self._timing_reconstruction["T3_project_alloc"] += p['T1_alloc']+p['T6_free']
+        self._timing_reconstruction["T5_project_integral"] += p['T4_integral']
+        self._timing_reconstruction["T7_project_rotate"] += p['T2_rotate']
+        self._timing_reconstruction["T9_project_resample"] += p['T3_resample']
+        self._timing_reconstruction["T11_project_subsets"] += p['t3_prepare_compressed']
+
+    def _time_profiling_record_backprojection(self): 
+        b = self._timing_backprojection 
+        self._timing_reconstruction["T2_backproject_transfer"] += b['T0_transfer_to_gpu']+ \
+            b['T9_copy_texture']+ b['T5_transfer_to_host']
+        self._timing_reconstruction["T4_backproject_alloc"] += b['T1_alloc'] + b['T6_free'] 
+        self._timing_reconstruction["T6_backproject_integral"] += b['T4_integral']
+        self._timing_reconstruction["T8_backproject_rotate"] += b['T2_rotate']
+        self._timing_reconstruction["T10_backproject_resample"] += b['T3_resample']
+        self._timing_reconstruction["T12_backproject_subsets"] += b['t2_prepare_compressed']
+    
+    def _time_profiling_record_norm(self):
+        pass 
+        
     def set_activity_shape(self, activity_shape): 
         if not len(activity_shape) == 3: 
             print "Invalid activity shape"  #FIXME: raise invalid input error
@@ -321,6 +399,7 @@ class PET_Static_Scan():
         self._use_gpu = use_it
 
     def use_compression(self, use_it): 
+        self._use_compression = use_it 
         if not use_it: 
             if self.prompts is not None: 
                 if self.prompts.is_compressed(): 
@@ -338,8 +417,8 @@ class PET_Static_Scan():
             if hasattr(self,"_use_compression"): 
                 if self._use_compression is False and use_it is True: 
                     # FIXME 
-                    print "Not able to compress once uncompressed. Please implement PET_Projection.uncompress_self() to "
-                    print "enable this functionality. "
+                    #print "Not able to compress once uncompressed. Please implement PET_Projection.uncompress_self() to "
+                    #print "enable this functionality. "
                     return 
             if self.prompts is not None: 
                 if not self.prompts.is_compressed(): 
@@ -353,13 +432,14 @@ class PET_Static_Scan():
             if self.scatter is not None: 
                 if not self.scatter.is_compressed(): 
                     self.set_scatter( self.scatter.compress_self() ) 
-        self._use_compression = use_it 
 
     def get_scatter(self): 
         return self.scatter 
 
-    def set_scatter(self, scatter): 
+    def set_scatter(self, scatter, duration_ms=None): 
         self.scatter = scatter  
+        if duration_ms is not None: 
+            self.scatter.time_bins = int32([0,duration_ms])
 
     def get_prompts(self): 
         return self.prompts
@@ -427,24 +507,25 @@ class PET_Static_Scan():
             sensitivity = import_PET_Projection(filename)
         elif filetype is "interfile_projection_header": 
             sensitivity = import_interfile_projection(filename,self.binning,self.scanner.michelogram,datafile,True,vmin,vmax)
-            if self.prompts is not None:  # FIXME: sensitivity loaded from interfile with some manufacturers has non-zero value 
-                                          # where there are no detectors - set to zero where data is zero 
-                                          #(good approx only for long acquisitions). See if there is a better 
-                                          # way to handle this. 
-                sensitivity.data[self.prompts.data==0]=0
-            else: 
-                print "Warning: If loading real scanner data, please load prompts before loading the sensitivity. Ignore this message if this is a simulation. See the source code for more info. " # FIXME: see comment two lines up 
+#            if self.prompts is not None:  # FIXME: sensitivity loaded from interfile with some manufacturers has non-zero value 
+#                                          # where there are no detectors - set to zero where data is zero 
+#                                          #(good approx only for long acquisitions). See if there is a better 
+#                                          # way to handle this. 
+#                sensitivity.data[self.prompts.data==0]=0
+#            else: 
+#                print "Warning: If loading real scanner data, please load prompts before loading the sensitivity. Ignore this message if this is a simulation. See the source code for more info. " # FIXME: see comment two lines up 
         elif filetype is "mat": 
             print "Sensitivity from Matlab not yet implemented. All is ready, please spend 15 minutes and implement. "
             return 
         else: 
             print "File type unknown. "
             return 
+        sensitivity.data = float32(sensitivity.data)
         if self._use_compression is False: 
             sensitivity = sensitivity.uncompress_self() 
         self.set_sensitivity(sensitivity)
 
-    def import_scatter(self, filename, datafile=''): 
+    def import_scatter(self, filename, datafile='', duration_ms=None): 
         filetype = guess_file_type_by_name(filename) 
         if filetype is "interfile_projection_header": 
             projection = import_interfile_projection(filename, self.binning, self.scanner.michelogram, datafile)
@@ -453,9 +534,10 @@ class PET_Static_Scan():
         else: 
             print "PET.import_scatter: file type unknown. "
             return 
+        projection.data = float32(projection.data)
         if self._use_compression is False: 
             projection = projection.uncompress_self() 
-        self.set_scatter(projection) 
+        self.set_scatter(projection, duration_ms) 
 
     def import_randoms(self, filename, datafile=''): 
         filetype = guess_file_type_by_name(filename) 
@@ -466,6 +548,7 @@ class PET_Static_Scan():
         else: 
             print "PET.import_randoms: file type unknown. "
             return
+        projection.data = float32(projection.data)
         if self._use_compression is False: 
             projection = projection.uncompress_self() 
         self.set_randoms(projection)
@@ -473,12 +556,13 @@ class PET_Static_Scan():
     def import_prompts(self, filename, datafile=''):
         filetype = guess_file_type_by_name(filename) 
         if filetype is "interfile_projection_header": 
-            projection = import_interfile_projection(filename, self.binning, self.scanner.michelogram, datafile)
+            projection = import_interfile_projection(filename, self.binning, self.scanner.michelogram, datafile, load_time=True)
         elif filetype is "h5": 
              projection = import_PET_Projection(filename)
         else: 
             print "PET.import_prompts: file type unknown. "
             return
+        projection.data = float32(projection.data)
         if self._use_compression is False: 
             projection = projection.uncompress_self() 
         self.set_prompts(projection)
@@ -505,13 +589,32 @@ class PET_Static_Scan():
             else: 
                 print "File type of %s unknown. Unable to load hardware attenuation tomogram. "%filename_hardware
             volume.data = volume.data + volume_hardware.data  
+        volume.data = float32(volume.data)
         self.set_attenuation(volume)
 
     def import_attenuation_projection(self, filename, datafile=''): 
-        print "Not implemented. All is ready, please spend 10 minutes to implement it if you would like this feature. "
-        # FIXME: support interfile, h5, matlab, nifti 
+        filetype = guess_file_type_by_name(filename) 
+        if filetype is "interfile_projection_header": 
+            projection = import_interfile_projection(filename, self.binning, self.scanner.michelogram, datafile, load_time=True)
+        elif filetype is "h5": 
+             projection = import_PET_Projection(filename)
+        else: 
+            print "PET.import_attenuation_projection: file type unknown. "
+            return
+        projection.data = float32(projection.data)
+        if self._use_compression is False: 
+            projection = projection.uncompress_self() 
+        self.set_attenuation_projection(projection)
 
+    def export_attenuation_projection(self,filename): 
+        self.get_attenuation_projection().save_to_file(filename)
 
+    def get_attenuation_projection(self): 
+        return self.attenuation_projection
+
+    def set_attenuation_projection(self, attenuation_projection): 
+        self.attenuation_projection = attenuation_projection
+    
     def import_listmode(self, filename, datafile=None, time_range_ms=[0,None], display_progress=False ): 
         """Load measurement data from a listmode file. """
         print_debug("- Loading static PET data from listmode file "+str(filename) )
@@ -593,25 +696,33 @@ class PET_Static_Scan():
 
         # Load static measurement data 
         self._load_static_measurement() 
+        
+        # Free structures listmode data
+        self.scanner.listmode.free_memory()
 
         # Construct ilang model 
         self._construct_ilang_model()
     
-    def quick_inspect(self): 
+    def quick_inspect(self, index_axial=0, index_azimuthal=5, index_bin=60): 
         if self.randoms is not None and not isscalar(self.randoms): 
-            randoms = self.randoms.to_nd_array()[0,5,:,60]
+            randoms = self.randoms.to_nd_array()[index_axial,index_azimuthal,:,index_bin]
         else: 
             randoms = 0.0 
         if self.prompts is not None and not isscalar(self.prompts): 
-            prompts = self.prompts.to_nd_array()[0,5,:,60]
+            prompts = self.prompts.to_nd_array()[index_axial,index_azimuthal,:,index_bin]
         else: 
             prompts = 0.0 
         if self.sensitivity is not None and not isscalar(self.sensitivity): 
-            sensitivity = self.sensitivity.to_nd_array()[0,5,:,60]
+            sensitivity = self.sensitivity.to_nd_array()[index_axial,index_azimuthal,:,index_bin]
         else: 
             sensitivity = 1.0 
         if self.scatter is not None and not isscalar(self.scatter): 
-            scatter = self.scatter.to_nd_array()[0,5,:,60]
+            scatter = self.scatter.to_nd_array()[index_axial,index_azimuthal,:,index_bin]
+            if self.scatter.get_duration() is not None: 
+                if self.scatter.get_duration() > 1e-6: 
+                    if self.prompts.get_duration() is not None: 
+                        if self.prompts.get_duration() > 1e-6: 
+                            scatter = scatter * self.prompts.get_duration() / self.scatter.get_duration()
         else: 
             scatter = 0.0 
         if has_pylab: 
@@ -622,18 +733,21 @@ class PET_Static_Scan():
             print "quick_inspect uses Pylab to display imaging data. Please install Pylab. " 
 
     def _get_sparsity(self): 
-        if self.prompts == None: 
-            # in this case returns sparsity pattern for uncompressed projection 
-            sparsity = PET_Projection_Sparsity(self.binning.N_axial, self.binning.N_azimuthal, self.binning.N_u, self.binning.N_v)
-        else: 
-            sparsity = self.prompts.sparsity
+        #if self.prompts == None: 
+        # in this case returns sparsity pattern for uncompressed projection 
+        sparsity = PET_Projection_Sparsity(self.binning.N_axial, self.binning.N_azimuthal, self.binning.N_u, self.binning.N_v)
+        #else: 
+        #    sparsity = self.prompts.sparsity
         return sparsity 
 
     def set_scale_activity(self,scale): 
         self.scale_activity = scale 
 
 
-    def project_attenuation(self, attenuation, unit='inv_cm', roi=None, sparsity=None, subsets_matrix=None, exponentiate=True): 
+    def project_attenuation(self, attenuation=None, unit='inv_cm', transformation=None, sparsity=None, \
+                            subsets_matrix=None, exponentiate=True): 
+        if attenuation is None: 
+            attenuation = self.attenuation 
         if isinstance(attenuation,ndarray): 
             attenuation_data = f_continuous(float32(attenuation)) 
         else: 
@@ -643,11 +757,16 @@ class PET_Static_Scan():
             raise UnexpectedParameter("Attenuation must have the same shape as self.attenuation_shape") 
 
         # By default, the center of the imaging volume is at the center of the scanner 
-        if roi is None:  
-            tx = 0.5*(self.attenuation_size[0] - self.attenuation_size[0] / self.attenuation_shape[0])
-            ty = 0.5*(self.attenuation_size[1] - self.attenuation_size[1] / self.attenuation_shape[1])
-            tz = 0.5*(self.attenuation_size[2] - self.attenuation_size[2] / self.attenuation_shape[2])
-            roi = ROI((tx,ty,tz,0,0,0))
+        tx = 0.5*(self.attenuation_size[0] - self.attenuation_size[0] / self.attenuation_shape[0])
+        ty = 0.5*(self.attenuation_size[1] - self.attenuation_size[1] / self.attenuation_shape[1])
+        tz = 0.5*(self.attenuation_size[2] - self.attenuation_size[2] / self.attenuation_shape[2])
+        if transformation is None:  
+            transformation = RigidTransform((tx,ty,tz,0,0,0)) 
+        else: 
+            transformation = copy.copy(transformation)
+            transformation.x = transformation.x + tx
+            transformation.y = transformation.y + ty
+            transformation.z = transformation.z + tzy
 
         # Scale according to the unit measure of the specified attenuation. It is assumed that the attenuation map 
         # is constant in a voxel, with the value specified in 'attenuation', of unit measure 'unit'. 
@@ -675,52 +794,68 @@ class PET_Static_Scan():
 
         # Optionally project with a sparsity pattern not equal to sparsity associated to the loaded prompts data 
         # Note: if prompts have not been loaded, self._get_sparsity() assumes no compression. 
-        if sparsity == None: 
+        
+        if sparsity is None: 
             sparsity = self._get_sparsity() 
 
         # Optionally project only to a subset of projection planes  
         if subsets_matrix is None: 
-            subsets_matrix=self._subsets_generator.all_active()
-
+            sparsity_subset = sparsity
+            angles = self.binning.get_angles()
+        else: 
+            sparsity_subset = sparsity.get_subset(subsets_matrix)
+            angles = self.binning.get_angles(subsets_matrix)
+ 
+        offsets = sparsity_subset.offsets
+        locations = sparsity_subset.locations 
+        activations = ones([angles.shape[1], angles.shape[2]],dtype="uint32")
+        
         # Call the raytracer 
-        projection_data = PET_project_compressed(attenuation_data,None,sparsity.offsets,sparsity.locations, subsets_matrix, 
-            self.binning.N_axial, self.binning.N_azimuthal, 
-            float32(self.binning.angles_axial), float32(self.binning.angles_azimuthal), 
+        projection_data, timing = PET_project_compressed(attenuation_data,None,offsets, locations, activations, 
+            angles.shape[2], angles.shape[1], angles, 
             self.binning.N_u, self.binning.N_v, self.binning.size_u, self.binning.size_v, 
             self.attenuation_size[0], self.attenuation_size[1], self.attenuation_size[2], 
             0.0,0.0,0.0, 
-            roi.x, roi.y, roi.z, roi.theta_x, roi.theta_y, roi.theta_z, 
+            transformation.x, transformation.y, transformation.z, transformation.theta_x, transformation.theta_y, transformation.theta_z, 
             0.0,0.0,0.0,0.0,0.0,0.0, 
             self.attenuation_projection_parameters.gpu_acceleration, self.attenuation_projection_parameters.N_samples,
             self.attenuation_projection_parameters.sample_step, self.attenuation_projection_parameters.background_attenuation, 
             0.0, self.attenuation_projection_parameters.truncate_negative_values, 
             self.attenuation_projection_parameters.direction, self.attenuation_projection_parameters.block_size) 
         
+        self._timing_projection = timing
+        
         # Fix scale and exponentiate 
         if exponentiate: 
-            projection_data = exp(-float64(projection_data) * step_size) 
+            projection_data = exp(-projection_data * step_size) 
         else: 
             projection_data = projection_data * step_size
 
         # Create object PET_Projection: it contains the raw projection data and the description of the projection geometry 
         # and sparsity pattern. 
         time_bins = int32([0,0])  # Projection of the attenuation does not have timing information 
-        projection = PET_Projection( self.binning, projection_data, sparsity.offsets, sparsity.locations, time_bins)  
+        projection = PET_Projection( self.binning, projection_data, sparsity.offsets, sparsity.locations, time_bins, subsets_matrix)  
+        self.set_attenuation_projection(projection)
         return projection 
 
 
-    def backproject_attenuation(self, projection, unit="inv_cm", roi=None, sparsity=None, subsets_matrix=None): 
+    def backproject_attenuation(self, projection, unit="inv_cm", transformation=None, sparsity=None, subsets_matrix=None): 
         if isinstance(projection,ndarray): 
             projection_data = float32(projection)
         else: 
             projection_data = float32(projection.data)
 
         # By default, the center of the imaging volume is at the center of the scanner 
-        if roi is None:  
-            tx = 0.5*(self.attenuation_size[0] - self.attenuation_size[0] / self.attenuation_shape[0])
-            ty = 0.5*(self.attenuation_size[1] - self.attenuation_size[1] / self.attenuation_shape[1])
-            tz = 0.5*(self.attenuation_size[2] - self.attenuation_size[2] / self.attenuation_shape[2])
-            roi = ROI((tx,ty,tz,0,0,0)) 
+        tx = 0.5*(self.attenuation_size[0] - self.attenuation_size[0] / self.attenuation_shape[0])
+        ty = 0.5*(self.attenuation_size[1] - self.attenuation_size[1] / self.attenuation_shape[1])
+        tz = 0.5*(self.attenuation_size[2] - self.attenuation_size[2] / self.attenuation_shape[2])
+        if transformation is None:  
+            transformation = RigidTransform((tx,ty,tz,0,0,0)) 
+        else: 
+            transformation = copy.copy(transformation)
+            transformation.x = transformation.x + tx
+            transformation.y = transformation.y + ty
+            transformation.z = transformation.z + tz
 
         # Scale according to the unit measure of the specified attenuation. It is assumed that the attenuation map 
         # is constant in a voxel, with the value specified in 'attenuation', of unit measure 'unit'. 
@@ -746,57 +881,72 @@ class PET_Static_Scan():
         step_size_mm = self.attenuation_projection_parameters.sample_step 
         step_size = step_size_mm / scale
 
-        # Optionally specify a sparsity pattern. Otherwise use the sparsity pattern in 'projection'. 
-        # If projection is raw data, by default use the sparsity pattern associated to the prompts. 
-        # Note: if prompts have not been loaded, self._get_sparsity() assumes no compression. 
         if sparsity is None: 
-            if hasattr(projection,"sparsity"): 
-                sparsity = projection.sparsity 
-            else: 
                 sparsity = self._get_sparsity() 
-
-        # Optionally project only to a subset of projection planes  
-        if subsets_matrix is None: 
-            subsets_matrix=self._subsets_generator.all_active() 
-
+        
+        if isinstance(projection,ndarray): 
+            projection_data = float32(projection)
+            offsets = sparsity.offsets
+            locations = sparsity.locations
+            angles = self.binning.get_angles(subsets_matrix)
+            activations = ones([self.binning.N_azimuthal,self.binning.N_axial],dtype="uint32")
+        else: 
+            projection_data = float32(projection.data)
+            offsets = projection.sparsity.offsets
+            locations = projection.sparsity.locations 
+            angles = projection.get_angles()
+            activations = ones([projection.sparsity.N_azimuthal,projection.sparsity.N_axial],dtype="uint32")        
+        
+        #print "backproject attenuation" 
+        #print "projection_data",projection_data.shape
+        #print "offsets",offsets.shape
+        #print "locations",locations.shape
+        #print "activations",activations.shape
+        #print "angles",angles.shape
+        
         # Call ray-tracer 
-        backprojection_data = PET_backproject_compressed(projection_data,None,sparsity.offsets, 
-            sparsity.locations, subsets_matrix, 
-            self.binning.N_axial, self.binning.N_azimuthal, float32(self.binning.angles_axial),
-            float32(self.binning.angles_azimuthal), 
+        backprojection_data, timing = PET_backproject_compressed(projection_data,None, offsets, locations, activations, 
+            angles.shape[2], angles.shape[1], angles, 
             self.binning.N_u, self.binning.N_v, self.binning.size_u, self.binning.size_v, 
             self.attenuation_shape[0], self.attenuation_shape[1], self.attenuation_shape[2], 
             self.attenuation_size[0], self.attenuation_size[1], self.attenuation_size[2], 
             0.0, 0.0, 0.0, 
-            roi.x, roi.y, roi.z, roi.theta_x, roi.theta_y, roi.theta_z, 
+            transformation.x, transformation.y, transformation.z, transformation.theta_x, transformation.theta_y, transformation.theta_z, 
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
             self.attenuation_backprojection_parameters.gpu_acceleration, self.attenuation_backprojection_parameters.N_samples,
             self.attenuation_backprojection_parameters.sample_step, 
             self.attenuation_backprojection_parameters.background_attenuation, 0.0, 
             self.attenuation_backprojection_parameters.direction, self.attenuation_backprojection_parameters.block_size) 
 
+        self._timing_backprojection = timing
         backprojection_data = backprojection_data * step_size 
         
         # Set the correct scale - unit measure and return Image3D - FIXME: set scale for requested unit measure 
         return self._make_Image3D_attenuation(backprojection_data)  
 
 
-    def project_activity(self, activity, unit="Bq/mm3", roi=None, sparsity=None, subsets_matrix=None): 
+    def project_activity(self, activity, unit="Bq/mm3", transformation=None, sparsity=None, subsets_matrix=None):
+        t0 = time.time()
         if isinstance(activity,ndarray): 
             activity_data = f_continuous(float32(activity))
         else: 
             activity_data = f_continuous(float32(activity.data))
-
-        if not list(activity_data.shape)[0:3] == list(self.activity_shape)[0:3]: 
-            raise UnexpectedParameter("Activity must have the same shape as self.activity_shape")
-
-        # By default, the center of the imaging volume is at the center of the scanner 
-        if roi  is None:  
-            tx = 0.5*(self.activity_size[0] - self.activity_size[0] / self.activity_shape[0])
-            ty = 0.5*(self.activity_size[1] - self.activity_size[1] / self.activity_shape[1])
-            tz = 0.5*(self.activity_size[2] - self.activity_size[2] / self.activity_shape[2])
-            roi = ROI((tx,ty,tz,0,0,0))
-
+        
+        t1_make_continuous = (time.time()-t0)*1000
+        t0 = time.time()
+        
+        # By default, the center of the imaging volume is at the center of the scanner; no rotation 
+        tx = 0.5*(self.activity_size[0] - self.activity_size[0] / self.activity_shape[0])
+        ty = 0.5*(self.activity_size[1] - self.activity_size[1] / self.activity_shape[1])
+        tz = 0.5*(self.activity_size[2] - self.activity_size[2] / self.activity_shape[2])
+        if transformation is None:  
+            transformation = RigidTransform((tx,ty,tz,0,0,0)) 
+        else: 
+            transformation = copy.copy(transformation)
+            transformation.x = transformation.x + tx
+            transformation.y = transformation.y + ty
+            transformation.z = transformation.z + tz
+            
         # Optionally project with a sparsity pattern not equal to sparsity associated to the loaded prompts data 
         # Note: if prompts have not been loaded, self._get_sparsity() assumes no compression. 
         if sparsity is None: 
@@ -804,31 +954,63 @@ class PET_Static_Scan():
 
         # Optionally project only to a subset of projection planes  
         if subsets_matrix is None: 
-            subsets_matrix=self._subsets_generator.all_active()
+            sparsity_subset = sparsity
+            angles = self.binning.get_angles()
+        else: 
+            sparsity_subset = sparsity.get_subset(subsets_matrix)
+            angles = self.binning.get_angles(subsets_matrix)
         
         scale = 1.0  #FIXME: change this according to the input unit measure - check how this is done in project_attenuation
         step_size_mm = self.activity_projection_parameters.sample_step 
         step_size = step_size_mm / scale
 
+        offsets = sparsity_subset.offsets
+        locations = sparsity_subset.locations 
+        activations = ones([angles.shape[1],angles.shape[2]],dtype="uint32")
+        
+        #print locations[:,0:20]
+        #print locations.flags
+        #print sparsity.locations[:,0:20]
+        #print sparsity.locations.flags
+        
+        #print "project activity"
+        #print "activity",activity_data.shape
+        #print "offsets",offsets.shape
+        #print "locations",locations.shape
+        #print "activations",activations.shape
+        #print "angles.shape",angles.shape
+
+        t2_prepare_compressed = (time.time()-t0)*1000
+        t0 = time.time()
+        
         # Call the raytracer 
-        projection_data = PET_project_compressed(activity_data,None,sparsity.offsets,sparsity.locations, subsets_matrix, 
-            self.binning.N_axial, self.binning.N_azimuthal, 
-            float32(self.binning.angles_axial), float32(self.binning.angles_azimuthal), 
+        projection_data, timing = PET_project_compressed(activity_data, None, offsets, locations, activations, 
+            angles.shape[2], angles.shape[1], angles,  
             self.binning.N_u, self.binning.N_v, self.binning.size_u, self.binning.size_v, 
             self.activity_size[0], self.activity_size[1], self.activity_size[2], 
             0.0,0.0,0.0, 
-            roi.x, roi.y, roi.z, roi.theta_x, roi.theta_y, roi.theta_z, 
+            transformation.x, transformation.y, transformation.z, transformation.theta_x, transformation.theta_y, transformation.theta_z, 
             0.0,0.0,0.0,0.0,0.0,0.0, 
             self.activity_projection_parameters.gpu_acceleration, self.activity_projection_parameters.N_samples,
             self.activity_projection_parameters.sample_step, self.activity_projection_parameters.background_activity, 
             0.0, self.activity_projection_parameters.truncate_negative_values, 
             self.activity_projection_parameters.direction, self.activity_projection_parameters.block_size) 
 
+        t3_project = (time.time()-t0)*1000
+        t0 = time.time()
+        
+        self._timing_projection = timing
         # Create object PET_Projection: it contains the raw projection data and the description of the projection geometry 
         # and sparsity pattern. 
         time_bins = int32([0,1000.0])     # 1 second - projection returns a rate - by design 
         projection_data = projection_data * step_size
-        projection = PET_Projection( self.binning, projection_data, sparsity.offsets, sparsity.locations, time_bins)  
+        
+        t4_scale = (time.time()-t0)*1000
+        t0 = time.time()
+        
+        projection = PET_Projection( self.binning, projection_data, sparsity.offsets, sparsity.locations, time_bins, subsets_matrix)  
+
+        t5_make_projection = (time.time()-t0)*1000
 
         # Optionally scale by sensitivity, attenuation, time, global sensitivity 
         #if attenuation is not None: 
@@ -836,62 +1018,97 @@ class PET_Static_Scan():
         #if self.sensitivity is not None: 
         #    projection.data = projection.data * self.sensitivity.data.reshape(projection_data.shape)
         #self.sensitivity.compress_as(projection).data
+
+        self._timing_projection["t1_project_total"] = t3_project
+        self._timing_projection["t2_make_continuous"] = t1_make_continuous
+        self._timing_projection["t3_prepare_compressed"] = t2_prepare_compressed
+        self._timing_projection["t4_scale"] = t4_scale
+        self._timing_projection["t5_make_projection"] = t5_make_projection
+        
         return projection 
 
 
-    def backproject_activity(self, projection, roi=None, sparsity=None, subsets_matrix=None): 
-        if isinstance(projection,ndarray): 
-            projection_data = float32(projection)
-        else: 
-            projection_data = float32(projection.data)
-
-        # Optionally multiply by attenuation and sensitivity  
-        #if attenuation is not None:  
-        #    projection_data = projection_data * attenuation.data # attenuation.compress_as(self.prompts).data
-        #if self.sensitivity is not None: 
-        #    projection_data = projection_data * self.sensitivity.data.reshape(projection_data.shape) 
-        #self.sensitivity.compress_as(self.prompts).data
-
+    def backproject_activity(self, projection, transformation=None, subsets_matrix=None): 
         # By default, the center of the imaging volume is at the center of the scanner 
-        if roi is None:  
-            tx = 0.5*(self.activity_size[0] - self.activity_size[0] / self.activity_shape[0])
-            ty = 0.5*(self.activity_size[1] - self.activity_size[1] / self.activity_shape[1])
-            tz = 0.5*(self.activity_size[2] - self.activity_size[2] / self.activity_shape[2])
-            roi = ROI((tx,ty,tz,0,0,0)) 
-
-        # Optionally specify a sparsity pattern. Otherwise use the sparsity pattern in 'projection'. 
-        # If projection is raw data, by default use the sparsity pattern associated to the prompts. 
-        # Note: if prompts have not been loaded, self._get_sparsity() assumes no compression. 
-        if sparsity is None: 
-            if hasattr(projection,"sparsity"): 
-                sparsity = projection.sparsity 
+        t0 = time.time()
+        tx = 0.5*(self.activity_size[0] - self.activity_size[0] / self.activity_shape[0])
+        ty = 0.5*(self.activity_size[1] - self.activity_size[1] / self.activity_shape[1])
+        tz = 0.5*(self.activity_size[2] - self.activity_size[2] / self.activity_shape[2])
+        if transformation is None:  
+            transformation = RigidTransform((tx,ty,tz,0,0,0)) 
+        else: 
+            transformation = copy.copy(transformation)
+            transformation.x = transformation.x + tx
+            transformation.y = transformation.y + ty
+            transformation.z = transformation.z + tz
+            
+        if not isinstance(projection,ndarray): 
+            if not subsets_matrix is None: 
+                projection_subset = projection.get_subset(subsets_matrix)
+                sparsity_subset = projection_subset.sparsity
+                angles = projection_subset.get_angles()  
+                projection_data = float32(projection_subset.data)
             else: 
-                sparsity = self._get_sparsity() 
-
-        # Optionally project only to a subset of projection planes  
-        if subsets_matrix is None: 
-            subsets_matrix=self._subsets_generator.all_active()
-
+                projection_subset = projection
+                sparsity_subset = projection.sparsity
+                angles = projection_subset.get_angles()  
+                projection_data = float32(projection_subset.data)
+        else: 
+            sparsity = self._get_sparsity() 
+            if not subsets_matrix is None: 
+                # doesn't look right 
+                indexes = subsets_matrix.flatten() == 1
+                projection_data = float32(projection.swapaxes(0,1). \
+                                          reshape((sparsity.N_axial*sparsity.N_azimuthal, \
+                                                   self.binning.N_u,self.binning.N_v))[indexes,:,:])
+                sparsity_subset = sparsity.get_subset(subsets_matrix)
+                angles = self.binning.get_angles(subsets_matrix)  
+            else: 
+                sparsity_subset = sparsity
+                angles = self.binning.get_angles()  
+                projection_data = float32(projection)
+                
+        offsets = sparsity_subset.offsets
+        locations = sparsity_subset.locations
+        activations = ones([sparsity_subset.N_azimuthal,sparsity_subset.N_axial],dtype="uint32")         
+            
         scale = 1.0  #FIXME: change this according to the input unit measure - check how this is done in project_attenuation
         step_size_mm = self.activity_projection_parameters.sample_step 
-        step_size = step_size_mm / scale
+        step_size = step_size_mm / scale  
 
+        t2_prepare_compressed = (time.time()-t0)*1000
+        t0 = time.time()
+        
+        #print "backproject activity" 
+        #print "projection_data",projection_data.shape
+        #print "offsets",offsets.shape
+        #print "locations",locations.shape
+        #print "activations",activations.shape
+        #print "angles",angles.shape
+        #print angles[:,0,0:5]
+        #print offsets[0:3,0:5]
+        #print locations[:,0:5]
+        #time.sleep(0.2)
+        
         # Call ray-tracer 
-        backprojection_data = PET_backproject_compressed(projection_data,None,sparsity.offsets, 
-            sparsity.locations, subsets_matrix, 
-            self.binning.N_axial, self.binning.N_azimuthal, float32(self.binning.angles_axial),
-            float32(self.binning.angles_azimuthal), 
+        backprojection_data, timing = PET_backproject_compressed(projection_data, None, offsets, locations, activations, 
+            angles.shape[2], angles.shape[1], angles,
             self.binning.N_u, self.binning.N_v, self.binning.size_u, self.binning.size_v, 
             self.activity_shape[0], self.activity_shape[1], self.activity_shape[2], 
             self.activity_size[0], self.activity_size[1], self.activity_size[2], 
             0.0, 0.0, 0.0, 
-            roi.x, roi.y, roi.z, roi.theta_x, roi.theta_y, roi.theta_z, 
+            transformation.x, transformation.y, transformation.z, transformation.theta_x, transformation.theta_y, transformation.theta_z, 
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
             self.activity_backprojection_parameters.gpu_acceleration, self.activity_backprojection_parameters.N_samples,
             self.activity_backprojection_parameters.sample_step, 
             self.activity_backprojection_parameters.background_activity, 0.0, 
             self.activity_backprojection_parameters.direction, self.activity_backprojection_parameters.block_size) 
 
+        t1_backproject_total = (time.time()-t0)*1000
+        self._timing_backprojection = timing
+        self._timing_backprojection["t1_backproject_total"] = t1_backproject_total
+        self._timing_backprojection["t2_prepare_compressed"] = t2_prepare_compressed 
+        
         backprojection_data = backprojection_data * step_size
         return self._make_Image3D_activity(backprojection_data)  
 
@@ -907,29 +1124,36 @@ class PET_Static_Scan():
         time_end          = Rp['time_end'] 
 
         time_bins = int32(linspace(time_start, time_end, 2))
-        self.set_prompts( PET_Projection( self.binning, Rp['counts'], Rp['offsets'], Rp['locations'], time_bins) )
-        self.set_randoms( PET_Projection( self.binning, Rd['counts'], Rd['offsets'], Rd['locations'], time_bins) )
+        prompts = PET_Projection( self.binning, Rp['counts'], Rp['offsets'], Rp['locations'], time_bins) 
+        randoms = PET_Projection( self.binning, Rd['counts'], Rd['offsets'], Rd['locations'], time_bins) 
+        if self._use_compression: 
+            self.set_prompts( prompts )
+            self.set_randoms( randoms )
+        else:
+            #print "Uncompressing"
+            self.set_prompts( prompts.uncompress_self() )
+            self.set_randoms( randoms.uncompress_self() )
         self._construct_ilang_model() 
         
 
-    def get_activity(self):
-        return self.activity 
+#    def get_activity(self):
+#        return self.activity 
 
-    def set_activity(self,activity): 
-        self.ilang_graph.set_node_value('lambda',activity) 
-        print "PET_Static_Scan.set_activity(): This is for integration with iLang - please implement"
-        # FIXME: how about the roi ? 
+#    def set_activity(self,activity): 
+#        self.ilang_graph.set_node_value('lambda',activity) 
+#        print "PET_Static_Scan.set_activity(): This is for integration with iLang - please implement"
+        # FIXME: how about the transformation ? 
 
     def get_attenuation(self):
         return self.attenuation 
 
     def set_attenuation(self,attenuation): 
-        self.ilang_graph.set_node_value('alpha',attenuation) 
-        # FIXME: how about the roi ? 
+        #self.ilang_graph.set_node_value('alpha',attenuation) 
+        # FIXME: how about the transformation ? 
         # FIXME: setting activity and attenuation as members here is not in the spirit of iLang - memoization 
         self.attenuation = attenuation 
 
-    def get_normalization(self, attenuation_times_sensitivity=None, roi=None, sparsity=None, duration_ms=None, subsets_matrix=None, epsilon=None): 
+    def get_normalization(self, attenuation_times_sensitivity=None, transformation=None, sparsity=None, duration_ms=None, subsets_matrix=None, epsilon=None): 
         # FIXME: memoization 
         if attenuation_times_sensitivity is None: 
             attenuation_times_sensitivity = self.sensitivity  #FIXME: include attenuation here - memoization mumap proj
@@ -939,10 +1163,10 @@ class PET_Static_Scan():
             duration_ms = self.prompts.get_duration() 
         duration_sec = duration_ms / 1000.0 
         alpha = self.scale_activity 
-        normalization = self.backproject_activity(attenuation_times_sensitivity*duration_sec*alpha,roi,sparsity,subsets_matrix) 
+        normalization = self.backproject_activity(attenuation_times_sensitivity*duration_sec*alpha,transformation,subsets_matrix) 
         return normalization 
 
-    def get_gradient_activity(self, activity, attenuation=None, unit_activity="Bq/mm3", roi_activity=None, 
+    def get_gradient_activity(self, activity, attenuation=None, unit_activity="Bq/mm3", transformation_activity=None, 
                               sparsity=None, duration_ms=None, subset_size=None, subset_mode='random', subsets_matrix=None,
                               azimuthal_range=None, separate_additive_terms=False, epsilon=None): 
         # Optionally use only a subset of the projections - use, in order: subsets_matrix; subset_size, subset_mode and az_range
@@ -982,19 +1206,29 @@ class PET_Static_Scan():
             att_sens = attenuation
         else: 
             att_sens = sensitivity * attenuation
-
+            
+            
+        att_sens = att_sens.get_subset(subsets_matrix)
+        
+        
         # Compute the firt term of the gradient: backprojection of the sensitivity of the scanner
         # If it is requested that the gradient is computed using all the projection measurements, use the 
         #memoized normalization. self.get_normalization() takes care of memoization.  
-        gradient_term1 = self.get_normalization(att_sens, roi_activity, sparsity, duration_ms, subsets_matrix, epsilon=epsilon)
-
+#        gradient_term1 = self.get_normalization(att_sens, transformation_activity, sparsity, duration_ms, subsets_matrix, epsilon=epsilon)
+        norm = PET_Projection(self.binning, data=1.0, subsets_matrix=subsets_matrix)
+        gradient_term1 = self.backproject_activity(norm)
+        print "the two lines above (1033-1034 PET.py) are temporary"
+        self._time_profiling_record_norm()
+        
         # Compute the second term of the gradient: backprojection of the ratio between the measurement and the projection of 
         # current activity estimate... Ordinary Poisson to include scatter and randoms.
-        projection = self.project_activity(activity, unit=unit_activity, roi=roi_activity, sparsity=sparsity,
+        projection = self.project_activity(activity, unit=unit_activity, transformation=transformation_activity, sparsity=sparsity,
                                            subsets_matrix=subsets_matrix) 
-        gradient_term2 = self.backproject_activity( prompts / (projection+randoms/(att_sens*alpha*duration_sec+epsilon)+scatter/(attenuation*alpha*duration_sec+epsilon)+epsilon),
-                              roi=roi_activity, sparsity=sparsity, subsets_matrix=subsets_matrix)
-
+        self._time_profiling_record_projection()
+        prompts_subset = prompts.get_subset(subsets_matrix)
+        gradient_term2 = self.backproject_activity( prompts_subset / (projection+randoms/(att_sens*alpha*duration_sec+epsilon)+scatter/(attenuation*alpha*duration_sec+epsilon)+epsilon),
+                              transformation=transformation_activity)
+        self._time_profiling_record_backprojection()
         if separate_additive_terms: 
             return (gradient_term1, gradient_term2, subsets_matrix) 
         else: 
@@ -1040,12 +1274,12 @@ class PET_Static_Scan():
         if sensitivity is None: 
             sensitivity = 1.0 
 
-        attenuation_projection = self.project_attenuation(attenuation, unit='inv_cm', roi=None, sparsity=sparsity, subsets_matrix=subsets_matrix, exponentiate=True) 
+        attenuation_projection = self.project_attenuation(attenuation, unit='inv_cm', transformation=None, sparsity=sparsity, subsets_matrix=subsets_matrix, exponentiate=True) 
         
-        #FIXME: roi = None 
-        pr_activity = self.project_activity(activity, roi=None, sparsity=sparsity,
+        #FIXME: transformation = None 
+        pr_activity = self.project_activity(activity, transformation=None, sparsity=sparsity,
                                            subsets_matrix=subsets_matrix)*sensitivity*attenuation_projection*duration_sec*alpha
-        gradient = self.backproject_attenuation(pr_activity - prompts/ (randoms/(pr_activity+epsilon) +  scatter/(pr_activity/(sensitivity+epsilon)+epsilon) + 1 ), unit="inv_cm", roi=None, sparsity=sparsity, 
+        gradient = self.backproject_attenuation(pr_activity - prompts/ (randoms/(pr_activity+epsilon) +  scatter/(pr_activity/(sensitivity+epsilon)+epsilon) + 1 ), unit="inv_cm", transformation=None, sparsity=sparsity, 
                                                 subsets_matrix=subsets_matrix)
         return gradient 
 
@@ -1117,11 +1351,12 @@ class PET_Static_Scan():
         
         if activity is None: 
             activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
-        # FIXME: use transformation - also notice that roi_activity is always set to None here
+        # FIXME: use transformation - also notice that transformation_activity is always set to None here
     
+        self._time_profiling_reset()
         for iteration in range(iterations): 
             [gradient1, gradient2, subsets_matrix] = self.get_gradient_activity(activity,self.attenuation_projection,
-                                                                         roi_activity=None, 
+                                                                         transformation_activity=None, 
                                                                          sparsity=sparsity,
                                                                          duration_ms=duration_ms, subset_size=subset_size,
                                                                          subset_mode=subset_mode, subsets_matrix=subsets_matrix,
@@ -1134,6 +1369,129 @@ class PET_Static_Scan():
             progress_bar.set_percentage(100.0) 
         return activity 
 
+    
+    def osem_reconstruction(self, iterations=10, activity=None, attenuation_projection=None, subset_mode="random", \
+                            subset_size=64, transformation=None):
+        if activity is None: 
+            activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
+            subsets_generator = SubsetGenerator(self.binning.N_azimuthal, self.binning.N_axial)
+        
+        if self.sensitivity is None: 
+            sensitivity = self.prompts.copy()
+            sensitivity.data = 0.0*sensitivity.data+1
+            self.set_sensitivity(sensitivity)
+        
+        for i in range(iterations):
+            print i
+            subsets_matrix = subsets_generator.new_subset(subset_mode, subset_size)
+            activity = self.osem_step(activity, subsets_matrix, attenuation_projection, transformation)
+        return activity
+    
+    def mlem_reconstruction(self, iterations=10, activity=None, attenuation_projection=None, transformation=None):
+        if activity is None: 
+            activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
+        
+        if self.sensitivity is None: 
+            sensitivity = self.prompts.copy()
+            sensitivity.data = 0.0*sensitivity.data+1
+            self.set_sensitivity(sensitivity)
+        
+        for i in range(iterations):
+            print i
+            subsets_matrix = None
+            activity = self.osem_step(activity, subsets_matrix, attenuation_projection, transformation)
+        return activity
+    
+    def osem_step(self, activity, subsets_matrix=None, attenuation_projection=None, transformation=None): 
+        epsilon = 1e-08
+        
+        prompts = self.prompts 
+        if self._use_compression: 
+            prompts = prompts.uncompress_self()
+        
+        duration_ms = prompts.get_duration() 
+        if duration_ms is None: 
+            print "Acquisition duration unknown (self.prompts.time_bins undefined); assuming 60 minutes. "
+            duration_ms = 1000*60*60 
+        duration = duration_ms / 1000.0 
+        alpha = self.scale_activity
+        
+        
+        if attenuation_projection is not None: 
+            attenuation_projection = attenuation_projection.get_subset(subsets_matrix)
+        elif self.attenuation_projection is not None: 
+            attenuation_projection = self.attenuation_projection.get_subset(subsets_matrix)
+        elif self.attenuation is not None:
+            print "Projecting attenuation"
+            self.attenuation_projection = self.project_attenuation(self.attenuation)
+            attenuation_projection = self.attenuation_projection.get_subset(subsets_matrix)
+            print "Done"
+        else: 
+            attenuation_projection = 1.0
+        
+        if self.sensitivity is not None: 
+            sens_x_att  = self.sensitivity.get_subset(subsets_matrix) * attenuation_projection
+        else: 
+            sens_x_att   = attenuation_projection
+    
+        if self.randoms is not None: 
+            randoms = self.randoms 
+            if self._use_compression: 
+                randoms = randoms.uncompress_self()
+            randoms = (randoms.get_subset(subsets_matrix) + epsilon) / (sens_x_att * alpha * duration + epsilon) 
+        
+        if self.scatter is not None: 
+            mscatter     = (self.scatter.get_subset(subsets_matrix) + epsilon) / (attenuation_projection * alpha * duration + epsilon)
+            # Scale scatter: this is used in dynamic and kinetic imaging, when scatter is calculated using the ativity for a time period longer than the current frame: 
+            if self.scatter.get_duration() is not None: 
+                if self.scatter.get_duration() > 1e-6: 
+                    mscatter = mscatter * duration / self.scatter.get_duration()
+
+        norm = self.backproject_activity(sens_x_att * alpha * duration, transformation=transformation)
+    
+        projection = self.project_activity(activity, subsets_matrix = subsets_matrix, transformation=transformation)
+    
+        if self.randoms is not None: 
+            if self.scatter is not None:
+                update1 = self.backproject_activity(prompts.get_subset(subsets_matrix)/(projection + randoms + mscatter + epsilon), transformation=transformation)
+            else: 
+                update1 = self.backproject_activity(prompts.get_subset(subsets_matrix)/(projection + randoms + epsilon), transformation=transformation)
+    
+        else:
+            if self.scatter is not None: 
+                update1 = self.backproject_activity(prompts.get_subset(subsets_matrix)/(projection + mscatter + epsilon), transformation=transformation)
+            else:
+                update1 = self.backproject_activity(prompts.get_subset(subsets_matrix)/(projection + epsilon), transformation=transformation)
+    
+        #activity = activity - gradient1
+        activity = (activity /(norm+epsilon)) * update1
+
+        return activity
+    
+
+    def brain_crop(self, bin_range=(100,240)):
+        if self._use_compression is True: 
+            print "Projection cropping currently only works with uncompressed data. "
+            print "In order to enable cropping, please complete the implementation of PET_Projection.get_subset()"
+            print "Now PET_Projection.get_subset() only works with uncompressed data. "
+            return 
+        if hasattr(self, "_cropped"): 
+            return 
+        A = bin_range[0]
+        B = bin_range[1]
+        self.binning.size_u = (1.0*self.binning.size_u) / self.binning.N_u * (B-A)
+        self.binning.N_u = B-A
+        if self.prompts is not None: 
+            self.prompts = self.prompts.crop((A,B))
+        if self.randoms is not None: 
+            self.randoms = self.randoms.crop((A,B))          
+        if self.scatter is not None: 
+            self.scatter = self.scatter.crop((A,B))     
+        if self.sensitivity is not None: 
+            self.sensitivity = self.sensitivity.crop((A,B))
+        self._cropped = True
+ 
+    
     def volume_render(self,volume,scale=1.0): 
         # FIXME: use the VolumeRender object in occiput.Visualization (improve it), the following is a quick fix: 
         [offsets,locations] = PET_initialize_compression_structure(180,1,256,256)
@@ -1149,7 +1507,7 @@ class PET_Static_Scan():
         volume[where(mask.data==0)]=0.0
         direction=7
         block_size=512
-        proj = PET_project_compressed(volume, None, offsets,locations, subsets_matrix, 
+        proj, timing = PET_project_compressed(volume, None, offsets,locations, subsets_matrix, 
             180, 1, pi/180, 0.0, 256, 256, 256.0, 256.0, 
             256.0, 256.0, 256.0,  
             256.0, 256.0, 256.0, 
@@ -1227,242 +1585,180 @@ class PET_Static_Scan():
         #table = ipy_table.set_column_style(0, color='lightBlue')
         table = ipy_table.set_global_style(float_format="%3.3f")        
         return table._repr_html_()
-
-    def __del__(self):
-        self.scanner.listmode.free_memory()
-        del(self.scanner.listmode) 
-
         
         
-class PET_Cyclic_Scan(PET_Static_Scan): 
-    """PET Dynamic Cyclic Scan. """
-    def load_listmode_file(self, hdr_filename, time_range_matrix_ms, data_filename=None, display_progress=False ): 
-        """Load cyclic measurement data from a listmode file. """
-        print_debug("- Loading static PET data from listmode file "+str(hdr_filename) )
-        hdr = Interfile.load(hdr_filename) 
-        #Extract information from the listmode header
 
-        # 1) Guess the path of the listmode data file, if not specified or mis-specified; 
-        #  1 - see if the specified listmode data file exists 
-        if data_filename is not None: 
-            data_filename = data_filename.replace("/",os.path.sep).replace("\\",os.path.sep) # cross platform compatibility 
-            if not os.path.exists(data_filename): 
-                raise FileNotFound("listmode data",data_filename)  
-        #  2 - if the listmode data file is not specified, try with the name (and full path) 
-        #      contained in the listmode header
-        data_filename      = hdr['name of data file']['value']
-        data_filename = data_filename.replace("/",os.path.sep).replace("\\",os.path.sep) # cross platform compatibility
-        if not os.path.exists(data_filename): 
-        #  3 - if it doesn't exist, look in the same path as the header file for the listmode data 
-        #      file with name specified in the listmode header file 
-            data_filename = os.path.split(hdr_filename)[0]+os.path.sep+os.path.split(data_filename)[-1]  
-            if not os.path.exists(data_filename): 
-        #  4 - if it doesn't exist, look in the same path as the header file for the listmode data 
-        #      file with same name as the listmode header file, replacing the extension: ".l.hdr -> .l" 
-                if hdr_filename.endswith(".l.hdr"): 
-                    data_filename = hdr_filename.replace(".l.hdr",".l") 
-                    if not os.path.exists(data_filename):     
-                        raise FileNotFound("listmode data",data_filename)  
-        #  5 - if it doesn't exist, look in the same path as the header file for the listmode data 
-        #      file with same name as the listmode header file, replacing the extension: ".hdr -> .l" 
-                elif hdr_filename.endswith(".hdr"): 
-                    data_filename = hdr_filename.replace(".hdr",".l") 
-                    if not os.path.exists(data_filename):     
-                        raise FileNotFound("listmode data",data_filename)  
-           
-        # 2) Determine duration of the acquisition 
-        n_packets              = hdr['total listmode word counts']['value'] 
-        scan_duration          = hdr['image duration']['value']*1000            # milliseconds
+
         
-        # 3) determine scanner parameters
-        n_radial_bins          = hdr['number of projections']['value'] 
-        n_angles               = hdr['number of views']['value'] 
-        n_rings                = hdr['number of rings']['value'] 
-        max_ring_diff          = hdr['maximum ring difference']['value']
-        n_sinograms            = n_rings+2*n_rings*max_ring_diff-max_ring_diff**2-max_ring_diff
-        n_frames      = time_range_matrix_ms.shape[0] 
-        n_cycles      = time_range_matrix_ms.shape[1] 
 
-        # 4) Display information 
-        print_debug(" - Number of packets:    %d       "%n_packets )
-        print_debug(" - Scan duration:        %d [sec] "%(scan_duration/1000.0) )
-        print_debug(" - Listmode data file:   %s       "%data_filename )
-        print_debug(" - Listmode header file: %s       "%hdr_filename)
-        print_debug(" - n_frames :            %d       "%n_frames)
-        print_debug(" - n_cycles :            %d       "%n_cycles)
-        print_debug(" - n_radial_bins:        %d       "%n_radial_bins)
-        print_debug(" - n_angles:             %d       "%n_angles)
-        print_debug(" - n_angles:             %d       "%n_sinograms)
+class PET_Multi2D_Scan(PET_Static_Scan):
+    def __init__(self):
+        self.n_slices = 0 
+        self.scatter_duration = None
+        self.prompts_duration = None
+        self.attenuation_projection = None
+        PET_Static_Scan.__init__(self)
+        
+    def set_activity_size(self, activity_size):
+            self.activity_size = ( activity_size[0], activity_size[1], self.n_slices )
 
-        if display_progress: 
-            progress_bar = ProgressBar()
-            progress_callback = progress_bar.set_percentage
+    def set_activity_shape(self, activity_shape):
+            self.activity_shape = ( activity_shape[0], activity_shape[1], self.n_slices )
+
+    def set_attenuation_projection(self, attenuation_projection):
+        self.attenuation_projection = attenuation_projection
+            
+    def set_prompts_duration(self, duration_array):
+        self.prompts_duration = duration_array
+        
+    def set_scatter_duration(self, duration_array):
+        self.scatter_duration = duration_array
+            
+    def set_number_of_slices(self, n_slices):
+        self.n_slices = n_slices
+        self.binning.N_azimuthal = 1 
+        self.binning.angles_azimuthal = int32([0,])
+        self.binning.N_v = self.n_slices + 1
+        self.binning.size_v = self.n_slices
+        self.set_binning(self.binning)
+        if self.scatter_duration is None: 
+            self.scatter_duration = ones([self.n_slices+1,])
+        if self.prompts_duration is None: 
+            self.prompts_duration = ones([self.n_slices+1,])
+
+    def osem_reconstruction(self, iterations=10, activity=None, subset_mode="random", subset_size=64, transformation=None):
+        if activity is None: 
+            activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
+            subsets_generator = SubsetGenerator(self.binning.N_azimuthal, self.binning.N_axial)
+        
+        if self.sensitivity is None: 
+            sensitivity = self.prompts.copy()
+            sensitivity.data = 0.0*sensitivity.data+1
+            self.set_sensitivity(sensitivity)
+        
+        for i in range(iterations):
+            print i
+            subsets_matrix = subsets_generator.new_subset(subset_mode, subset_size)
+            activity = self.osem_step(activity, subsets_matrix, transformation)
+        return activity
+    
+    def mlem_reconstruction(self, iterations=10, activity=None, transformation=None):
+        if activity is None: 
+            activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
+        
+        if self.sensitivity is None: 
+            sensitivity = self.prompts.copy()
+            sensitivity.data = 0.0*sensitivity.data+1
+            self.set_sensitivity(sensitivity)
+        
+        for i in range(iterations):
+            print i
+            subsets_matrix = None
+            activity = self.osem_step(activity, subsets_matrix, transformation)
+        return activity
+    
+    def osem_step(self, activity, subsets_matrix, transformation): 
+        epsilon = 1e-08
+        
+        prompts = self.prompts 
+        if self._use_compression: 
+            prompts = prompts.uncompress_self()
+        prompts = prompts.get_subset(subsets_matrix)
+
+        # make matrices of duration arrays 
+        prompts_duration = tile( self.prompts_duration / 1000.0, (prompts.data.shape[0], prompts.data.shape[1], \
+                                                                  prompts.data.shape[2], 1) )
+        scatter_duration = tile( self.scatter_duration / 1000.0, (prompts.data.shape[0], prompts.data.shape[1], \
+                                                                  prompts.data.shape[2], 1) )
+        alpha = self.scale_activity
+        
+        
+        if self.attenuation_projection is not None: 
+            attenuation_projection = self.attenuation_projection.get_subset(subsets_matrix)
         else: 
-            def progress_callback(value): 
-                pass 
+            attenuation_projection = 1.0
         
-        # Load the listmode data 
-        #self.set_span(11) 
-        M = self.scanner.michelogram
-        R = self.scanner.listmode.load_listmode_cyclic(data_filename, time_range_matrix_ms, self.binning, n_radial_bins, 
-                                              n_angles, n_sinograms, M.span, M.segments_sizes, M.michelogram_sinogram,
-                                              M.michelogram_plane, n_packets, progress_callback) 
-        progress_callback(100) 
-
-        self._dynamic = [] 
-        for t in range(n_frames): 
-            PET_t = PET_Static_Scan() 
-            PET_t.set_scanner(self.scanner.model) 
-            PET_t.set_binning(self.binning) 
-            PET_t._load_static_measurement(t) 
-            # make list of static scans
-            self._dynamic.append(PET_t) 
-            # also make one attribut for each static scan
-            setattr(self,"frame%d"%t,self._dynamic[t]) 
-            # set activity shape and size and attenuation shape and size 
-            PET_t.set_activity_size(self.activity_size)
-            PET_t.set_activity_shape(self.activity_shape)
-            PET_t.set_attenuation_size(self.activity_size)
-            PET_t.set_attenuation_shape(self.activity_shape)
-            #PET_t.set_span(self.michelogram.span)
-
-        # Make a global PET_Static_Scan object 
-#        self.static = PET_Static_Scan()
-#        self.static.set_scanner(self.scanner) 
-#        self.static.set_binning(self.binning) 
-#        self.static._load_static_measurement() 
-
-        # Load static measurement data 
-        self._load_static_measurement() 
-
-        # Construct ilang model 
-        self._construct_ilang_model()
+        if self.sensitivity is not None: 
+            sens_x_att  = self.sensitivity.get_subset(subsets_matrix) * attenuation_projection
+        else: 
+            sens_x_att   = attenuation_projection
+    
+        if self.randoms is not None: 
+            randoms = self.randoms 
+            if self._use_compression: 
+                randoms = randoms.uncompress_self()
+            randoms = (randoms.get_subset(subsets_matrix) + epsilon) / (sens_x_att * alpha * prompts_duration + epsilon) 
         
-        #return self 
+        if self.scatter is not None: 
+            mscatter     = (self.scatter.get_subset(subsets_matrix) + epsilon) / (attenuation_projection * alpha * prompts_duration + epsilon)
+            # Scale scatter: this is used in dynamic and kinetic imaging, when scatter is calculated using the ativity for a time period longer than the current frame: 
+            mscatter = mscatter * prompts_duration / scatter_duration
 
+        norm = self.backproject_activity(sens_x_att * alpha * prompts_duration, transformation=transformation)
+    
+        projection = self.project_activity(activity, subsets_matrix = subsets_matrix, transformation=transformation)
+    
+        if self.randoms is not None: 
+            if self.scatter is not None:
+                update1 = self.backproject_activity(prompts/(projection + randoms + mscatter + epsilon), transformation=transformation)
+            else: 
+                update1 = self.backproject_activity(prompts/(projection + randoms + epsilon), transformation=transformation)
+    
+        else:
+            if self.scatter is not None: 
+                update1 = self.backproject_activity(prompts/(projection + mscatter + epsilon), transformation=transformation)
+            else:
+                update1 = self.backproject_activity(prompts/(projection + epsilon), transformation=transformation)
+    
+        #activity = activity - gradient1
+        activity = (activity /(norm+epsilon)) * update1
 
+        return activity    
+        
+    def quick_inspect(self, index_axial=0, index_slice=0): 
+        index_azimuthal = 0
+        if self.randoms is not None and not isscalar(self.randoms): 
+            randoms = self.randoms.to_nd_array()[index_axial,index_azimuthal,:,index_slice+1]
+        else: 
+            randoms = 0.0 
+        if self.prompts is not None and not isscalar(self.prompts): 
+            prompts = self.prompts.to_nd_array()[index_axial,index_azimuthal,:,index_slice+1]
+        else: 
+            prompts = 0.0 
+        if self.sensitivity is not None and not isscalar(self.sensitivity): 
+            sensitivity = self.sensitivity.to_nd_array()[index_axial,index_azimuthal,:,index_slice+1]
+        else: 
+            sensitivity = 1.0 
+        if self.scatter is not None and not isscalar(self.scatter): 
+            scatter = self.scatter.to_nd_array()
+            prompts_duration = tile( self.prompts_duration / 1000.0, (self.prompts.data.shape[0], self.prompts.data.shape[1], \
+                                                                  self.prompts.data.shape[2], 1) )
+            scatter_duration = tile( self.scatter_duration / 1000.0, (self.prompts.data.shape[0], self.prompts.data.shape[1], \
+                                                                  self.prompts.data.shape[2], 1) )
+            scatter = scatter * prompts_duration / scatter_duration
+            scatter = scatter[index_axial,index_azimuthal,:,index_slice+1]
+        else: 
+            scatter = 0.0 
+        if has_pylab: 
+            pylab.plot(prompts - randoms)
+            pylab.hold(1)
+            pylab.plot(sensitivity*scatter,'g') 
+        else: 
+            print "quick_inspect uses Pylab to display imaging data. Please install Pylab. "         
+        
+        
+        
 
         
-        
-        
-        
-class PET_Dynamic_Scan(): 
-    """PET Dynamic Scan. """
+class PET_Dynamic_Scan(PET_Static_Scan): 
+    """PET Dynamic Scan. This is useful for motion correction and for kinetic imaging, or both. """
     def __init__(self): 
-        self.scanner     = None                                 # PET scanner interface - by default set Generic PET scanner 
-        self.set_scanner("Generic")                   
-
         self._dynamic      = []                                 # Sequence of static scans, one per time bin 
         self.time_bins     = []                                 # Time binning 
         self.static        = None
+        PET_Static_Scan.__init__(self)
 
-        self.projection_parameters     = ProjectionParameters()       
-        self.backprojection_parameters = BackprojectionParameters()   
-        self.set_gpu_acceleration(True)                         # change to self.disable_gpu_acceleration() to disable by default      
-
-        self.activity      = None                               # memoization of activity  
-        self.attenuation   = None  
-        self.sensitivity   = None 
-        #self.normalization = None                              # Normalization volume 
-        #self._need_normalization_update = True                  # If True, the normalization volume needs to be recomputed 
-
-        self.set_activity_shape(DEFAULT_ACTIVITY_SHAPE)  
-        self.set_activity_size(DEFAULT_ACTIVITY_SIZE)   
-        self.set_attenuation_shape(DEFAULT_ACTIVITY_SHAPE)  
-        self.set_attenuation_size(DEFAULT_ACTIVITY_SIZE)   
-
-        self._construct_ilang_model() 
-        #self._display_node = DisplayNode() 
-
-    def set_activity_shape(self, activity_shape): 
-        if not len(activity_shape) == 3: 
-            print "Invalid activity shape"  #FIXME: raise invalid input error
-        else: 
-            self.activity_shape = activity_shape 
-            for frame in self._dynamic: 
-                frame.set_activity_shape(activity_shape) 
-
-    def set_activity_size(self, activity_size): 
-        if not len(activity_size) == 3: 
-            print "Invalid activity size"  #FIXME: raise invalid input error
-        else: 
-            self.activity_size = activity_size 
-            for frame in self._dynamic: 
-                frame.set_activity_size(activity_size)
-                
-    def set_attenuation_shape(self, attenuation_shape): 
-        if not len(attenuation_shape) == 3: 
-            print "Invalid attenuation shape"  #FIXME: raise invalid input error
-        else: 
-            self.attenuation_shape = attenuation_shape 
-            for frame in self._dynamic: 
-                frame.set_attenuation_shape(activity_shape)
-                
-    def set_attenuation_size(self, attenuation_size): 
-        if not len(attenuation_size) == 3: 
-            print "Invalid attenuation size"  #FIXME: raise invalid input error
-        else: 
-            self.attenuation_size = attenuation_size 
-            for frame in self._dynamic: 
-                frame.set_attenuation_size(activity_size)
-
-    def _construct_ilang_model(self):
-        # define the ilang probabilistic model 
-        self.ilang_model = PET_Dynamic_Poisson(self)  
-        # construct the Directed Acyclical Graph
-        self.ilang_graph         = ProbabilisticGraphicalModel(['lambda','alpha','counts']) 
-#        self.ilang_graph.set_nodes_given(['counts','alpha'],True) 
-#        self.ilang_graph.add_dependence(self.ilang_model,{'lambda':'lambda','alpha':'alpha','z':'counts'}) 
-
-    def set_binning(self, binning): 
-        if isinstance(binning,Binning): 
-            self.binning = binning
-        else:    
-            self.binning = Binning(binning)
-        if self._dynamic is not None: 
-            for static in self._dynamic: 
-                static.set_binning(binning)
-        return self.binning 
-
-    def set_scanner(self,scanner): 
-        self.scanner = scanner 
-
-    def save_prompts_to_file(self,filename='./sinogram.h5'):
-        self.get_prompts().save_to_file(filename) 
-
-    def plot_motion_events(self): 
-        self.__motion_events.plot_mean_displacement()
- 
-    def plot_motion_parameters(self): 
-        self.__motion_events.plot_motion()
-        
-    def set_span(self, span, n_rings=64, max_ring_difference=60):     #FIXME: temporary, this will not be here but in the data loading machinery
-        self.michelogram = Michelogram(n_rings=n_rings, span=span, max_ring_difference=max_ring_difference)
-        parameters = {      "n_axial":                252,
-                            "n_azimuthal":            self.michelogram.n_segments,
-                            "angles_axial":           float32( linspace(0,pi-pi/252.0,252) ),
-                            "angles_azimuthal":       float32( linspace(deg_to_rad(-26.816),deg_to_rad(26.816),span) ),
-                            "size_u":                 437.98,
-                            "size_v":                 255.00,
-                            "n_u":                    344,
-                            "n_v":                    self.michelogram.segments_sizes.max(),   }
-        binning = Binning(parameters)
-        self.set_binning(binning)
-
-    def set_sensitivity(self, sensitivity): 
-        #FIXME: verify type 
-        self.sensitivity = sensitivity 
-
-    def save_sensitivity_to_file(self, filename): 
-        if self.sensitivity is None: 
-            print "Sensitivity has not been loaded"
-        else: 
-            self.sensitivity.save_to_file(filename)
-
-    def import_sensitivity_sinogram(self, headerfile, datafile):
-        print "- implement me -" 
-
-    def load_listmode_file(self, hdr_filename, time_range_ms=[0,None], data_filename=None, motion_files_path=None, display_progress=False ): 
+    def import_listmode(self, hdr_filename, time_range_ms=[0,None], data_filename=None, motion_files_path=None, display_progress=False ): 
         """Load prompts data from a listmode file. """
         #Optionally load motion information: 
         if motion_files_path: 
@@ -1538,9 +1834,8 @@ class PET_Dynamic_Scan():
                 pass 
         
         # Load the listmode data 
-        self.set_span(11) 
-        M = self.michelogram
-        R = self.scanner.load_listmode(data_filename, n_packets, time_range_ms, self.binning, n_radial_bins, n_angles, n_sinograms, M.span, M.segments_sizes, M.michelogram_sinogram, M.michelogram_plane, progress_callback) 
+        M = self.scanner.michelogram
+        R = self.scanner.listmode.load_listmode(data_filename, n_packets, time_range_ms, self.binning, n_radial_bins, n_angles, n_sinograms, M.span, M.segments_sizes, M.michelogram_sinogram, M.michelogram_plane, progress_callback) 
         if display_progress: 
             progress_bar.set_percentage(100) 
 
@@ -1556,7 +1851,9 @@ class PET_Dynamic_Scan():
         self._dynamic = [] 
         for t in range(N_time_bins): 
             PET_t = PET_Static_Scan() 
-            PET_t.set_scanner(self.scanner) 
+            PET_t.use_compression(self._use_compression)
+            PET_t.use_gpu(self._use_gpu)
+            PET_t.set_scanner(self.scanner.__class__) 
             PET_t.set_binning(self.binning) 
             PET_t._load_static_measurement(t) 
             # make list of static scans
@@ -1568,26 +1865,387 @@ class PET_Dynamic_Scan():
             PET_t.set_activity_shape(self.activity_shape)
             PET_t.set_attenuation_size(self.activity_size)
             PET_t.set_attenuation_shape(self.activity_shape)
-            PET_t.set_span(self.michelogram.span)
 
         # Make a global PET_Static_Scan object 
         self.static = PET_Static_Scan()
-        self.static.set_scanner(self.scanner) 
+        self.static.use_compression(self._use_compression)
+        self.static.use_gpu(self._use_gpu)
+        self.static.set_scanner(self.scanner.__class__) 
         self.static.set_binning(self.binning) 
         self.static._load_static_measurement() 
-
+        self.static.set_activity_size(self.activity_size)
+        self.static.set_activity_shape(self.activity_shape)
+        self.static.set_attenuation_size(self.activity_size)
+        self.static.set_attenuation_shape(self.activity_shape)
+        
+        # Free structures listmode data
+        self.scanner.listmode.free_memory()
+        
         # Construct ilang model 
         self._construct_ilang_model()
-        
-        #return self 
-
-    def set_gpu_acceleration(self, on=True): 
-        if self._dynamic is not None: 
-             for frame in self._dynamic: 
-                 frame.set_gpu_acceleration(on) 
-        if self.static is not None: 
-            self.static.set_gpu_acceleration(on) 
     
+    def import_prompts(self): 
+        print "Not implemented: should load prompts for multiple time frames and also set self.static.prompts to the integral."
+        
+    def import_randoms(self): 
+        print "Not implemented: should load randoms for multiple time frames and also set self.static.randoms to the integral."
+
+    def export_prompts(self): 
+        print "Not implemented." 
+        
+    def export_randoms(self): 
+        print "Not implemented." 
+        
+    def get_prompts(self): 
+        prompts = []
+        for frame in self: 
+            prompts.append(frame.prompts)
+        return prompts
+               
+    def set_prompts(self, prompts_list): 
+        N_time_bins = len(prompts_list)
+        if len(self) == N_time_bins: 
+            print "PET_Dynamic_Scan.set_prompts(): Number of sinograms matches current setup; no re-initialization."
+            for t in range(N_time_bins): 
+                self[t].set_prompts(prompts_list[t])                
+        else: 
+            print "PET_Dynamic_Scan.set_prompts(): Number of sinograms does not match current setup; re-initialization."
+            self._dynamic = [] 
+            total_prompts = prompts_list[0]*0
+            for t in range(N_time_bins): 
+                PET_t = PET_Static_Scan() 
+                PET_t.use_compression(self._use_compression)
+                PET_t.use_gpu(self._use_gpu)
+                PET_t.set_scanner(self.scanner.__class__) 
+                PET_t.set_binning(self.binning) 
+                PET_t.set_prompts(prompts_list[t])
+                self._dynamic.append(PET_t) 
+                setattr(self,"frame%d"%t,self._dynamic[t]) 
+                # FIXME: remove excess frames if new N_time_bins is less than previous 
+                PET_t.set_activity_size(self.activity_size)
+                PET_t.set_activity_shape(self.activity_shape)
+                PET_t.set_attenuation_size(self.activity_size)
+                PET_t.set_attenuation_shape(self.activity_shape)
+                total_prompts += prompts_list[t]
+
+            # Make a global PET_Static_Scan object 
+            self.static = PET_Static_Scan()
+            self.static.use_compression(self._use_compression)
+            self.static.use_gpu(self._use_gpu)
+            self.static.set_scanner(self.scanner.__class__) 
+            self.static.set_binning(self.binning) 
+            self.static.set_prompts(total_prompts)
+            self.static.set_activity_size(self.activity_size)
+            self.static.set_activity_shape(self.activity_shape)
+            self.static.set_attenuation_size(self.activity_size)
+            self.static.set_attenuation_shape(self.activity_shape)
+        
+            # Construct ilang model 
+            self._construct_ilang_model()
+
+    def get_randoms(self): 
+        randoms = []
+        for frame in self: 
+            randoms.append(frame.randoms)
+        return randoms
+
+    def set_randoms(self,randoms): 
+        N_time_bins = len(randoms_list)
+        if len(self) == N_time_bins: 
+            print "PET_Dynamic_Scan.set_randoms(): Number of sinograms matches current setup; no re-initialization."
+            for t in range(N_time_bins): 
+                self[t].set_randoms(randoms_list[t])                
+        else: 
+            print "PET_Dynamic_Scan.set_randoms(): Number of sinograms does not match current setup; re-initialization."
+            self._dynamic = [] 
+            total_randoms = randoms_list[0]*0
+            for t in range(N_time_bins): 
+                PET_t = PET_Static_Scan() 
+                PET_t.use_compression(self._use_compression)
+                PET_t.use_gpu(self._use_gpu)
+                PET_t.set_scanner(self.scanner.__class__) 
+                PET_t.set_binning(self.binning) 
+                PET_t.set_randoms(randoms_list[t])
+                self._dynamic.append(PET_t) 
+                setattr(self,"frame%d"%t,self._dynamic[t]) 
+                # FIXME: remove excess frames if new N_time_bins is less than previous 
+                PET_t.set_activity_size(self.activity_size)
+                PET_t.set_activity_shape(self.activity_shape)
+                PET_t.set_attenuation_size(self.activity_size)
+                PET_t.set_attenuation_shape(self.activity_shape)
+                total_randoms += randoms_list[t]
+
+            # Make a global PET_Static_Scan object 
+            self.static = PET_Static_Scan()
+            self.static.use_compression(self._use_compression)
+            self.static.use_gpu(self._use_gpu)
+            self.static.set_scanner(self.scanner.__class__) 
+            self.static.set_binning(self.binning) 
+            self.static.set_randoms(total_randoms)
+            self.static.set_activity_size(self.activity_size)
+            self.static.set_activity_shape(self.activity_shape)
+            self.static.set_attenuation_size(self.activity_size)
+            self.static.set_attenuation_shape(self.activity_shape)
+        
+            # Construct ilang model 
+            self._construct_ilang_model()
+
+    def get_scatter(self): 
+        return self.static.scatter 
+
+    def set_scatter(self, scatter, duration_ms=None): 
+        self.scatter = scatter  
+        self.static.set_scatter(scatter, duration_ms) 
+        for frame in range(len(self)): 
+            self[frame].set_scatter(scatter, duration_ms)
+
+    def get_sensitivity(self): 
+        return self.static.sensitivity 
+
+    def set_sensitivity(self, sensitivity): 
+        #FIXME: verify type: PET_projection or nd_array (the latter only in full sampling mode)
+        self.sensitivity = sensitivity
+        self.static.set_sensitivity(sensitivity) 
+        for frame in range(len(self)): 
+            self[frame].set_sensitivity(sensitivity)     
+
+    def get_attenuation(self):
+        return self.static.attenuation
+    
+    def set_attenuation(self, attenuation): 
+        #FIXME: verify type
+        self.static.set_attenuation(attenuation) 
+        for frame in range(len(self)): 
+            self[frame].set_attenuation(attenuation)  
+
+    def get_attenuation_projection(self):
+        return self.static.attenuation_projection 
+    
+    def set_attenuation_projection(self, attenuation_projection): 
+        #FIXME: verify type
+        self.attenuation_projection = attenuation_projection
+        self.static.set_attenuation_projection(attenuation_projection) 
+        for frame in range(len(self)): 
+            self[frame].set_attenuation_projection(attenuation_projection)  
+
+    def use_compression(self, use_it): 
+        self._use_compression = use_it
+        
+        
+    def set_activity_shape(self, activity_shape): 
+        if not len(activity_shape) == 3: 
+            print "Invalid activity shape"  #FIXME: raise invalid input error
+        else: 
+            self.activity_shape = activity_shape
+            if hasattr(self,"static"): 
+                if self.static is not None: 
+                    self.static.set_activity_shape(activity_shape)
+            for frame in range(len(self)):
+                self[frame].set_activity_shape(activity_shape)
+
+    def set_activity_size(self, activity_size): 
+        if not len(activity_size) == 3: 
+            print "Invalid activity size"  #FIXME: raise invalid input error
+        else: 
+            self.activity_size = activity_size
+            if hasattr(self,"static"): 
+                if self.static is not None: 
+                    self.static.set_activity_size(activity_size)
+            for frame in range(len(self)):
+                self[frame].set_activity_size(activity_size)
+
+    def set_attenuation_shape(self, attenuation_shape): 
+        if not len(attenuation_shape) == 3: 
+            print "Invalid attenuation shape"  #FIXME: raise invalid input error
+        else: 
+            self.attenuation_shape = attenuation_shape
+            if hasattr(self,"static"): 
+                if self.static is not None: 
+                    self.static.set_attenuation_shape(attenuation_shape)
+            for frame in range(len(self)):
+                self[frame].set_attenuation_shape(attenuation_shape)
+
+    def set_attenuation_size(self, attenuation_size): 
+        if not len(attenuation_size) == 3: 
+            print "Invalid attenuation size"  #FIXME: raise invalid input error
+        else: 
+            self.attenuation_size = attenuation_size
+            if hasattr(self,"static"): 
+                if self.static is not None: 
+                    self.static.set_attenuation_size(attenuation_size)
+            for frame in range(len(self)):
+                self[frame].set_attenuation_size(attenuation_size)
+
+    def brain_crop(self, bin_range=(100,240)):
+        if self._use_compression is True: 
+            print "Cropping currently only works with uncompressed data. "
+            return 
+        self.static.brain_crop(bin_range)
+        for frame in range(len(self)):
+            self[frame].brain_crop(bin_range)
+        
+    def osem_reconstruction(self, iterations=10, activity=None, subset_mode="random", subset_size=64, transformations=None):
+        for frame in range(len(self)):
+            if activity is not None: 
+                activity_init = activity[frame]
+            else:
+                if hasattr(self[frame],'activity'): 
+                    activity_init = self[frame].activity
+                else: 
+                    activity_init = None
+            if transformations is not None: 
+                transformation = transformations[frame]
+            else: 
+                transformation = None
+            print "Reconstructing frame %d/%d"%(frame,len(self))
+            activity_recon = self[frame].osem_reconstruction(iterations=iterations, \
+                             activity=activity_init, subset_mode=subset_mode, subset_size=subset_size, transformation=transformation)
+            self[frame].activity = activity_recon
+    
+    def osem_reconstruction_4D(self, iterations=10, activity=None, subset_mode="random", subset_size=64, transformations=None):
+        if activity is None: 
+            activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
+            subsets_generator = SubsetGenerator(self.binning.N_azimuthal, self.binning.N_axial)
+
+        attenuation_projection = None 
+        
+        if self.sensitivity is None: 
+            sensitivity = self.prompts.copy()
+            sensitivity.data = 0.0*sensitivity.data+1
+            self.set_sensitivity(sensitivity)
+        
+        for i in range(iterations):
+            print i
+            subsets_matrix = subsets_generator.new_subset(subset_mode, subset_size)
+            #subsets_matrix = ones([11,252])
+            activity = self.osem_step_4D(activity, subsets_matrix, attenuation_projection, transformations)
+        return activity
+    
+    def osem_step_4D(self, activity, subsets_matrix, attenuation_projection, transformations): 
+        print "Not implemented - please implement"
+        return 
+    
+        epsilon = 1e-08
+        if attenuation_projection is not None: 
+            attenuation_projection = attenuation_projection.get_subset(subsets_matrix)
+        else: 
+            attenuation_projection = 1.0
+        
+        if self.sensitivity is not None: 
+            sens_x_att  = self.sensitivity.get_subset(subsets_matrix) * attenuation_projection
+        else: 
+            sens_x_att   = attenuation_projection
+    
+        if self.randoms is not None: 
+            mrandoms     = self.randoms.get_subset(subsets_matrix) / (sens_x_att + epsilon) 
+        
+        if self.scatter is not None: 
+            mscatter     = (self.scatter.get_subset(subsets_matrix) + epsilon) / (attenuation_projection + epsilon)
+
+        norm = self.backproject_activity(sens_x_att, transformation=transformation)
+    
+        projection = self.project_activity(activity, subsets_matrix = subsets_matrix, transformation=transformation)
+    
+        if self.randoms is not None: 
+            if self.scatter is not None:
+                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + mrandoms + mscatter + epsilon), transformation=transformation)
+            else: 
+                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + mrandoms + epsilon), transformation=transformation)
+    
+        else:
+            if self.scatter is not None: 
+                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + mscatter + epsilon), transformation=transformation)
+            else:
+                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + epsilon), transformation=transformation)
+    
+        #activity = activity - gradient1
+        activity = (activity /(norm+epsilon)) * update1
+
+        return activity    
+    
+    
+
+    
+    def get_activity_as_array(self):
+        activities = []
+        for frame in range(len(self)): 
+            activity = self[frame].activity.data
+            activities.append(activity)
+        return asarray(activities)
+    
+    def get_2D_slices(self, slices=[62,63,64,65,66], azimuthal_index=5): 
+        N_time_bins = len(self)
+
+        pet = PET_Multi2D_Scan()
+        pet.use_compression(False)
+        pet.set_scanner(self.scanner.__class__)  
+        pet.set_number_of_slices( N_time_bins )
+        pet.set_activity_shape( (self.activity_shape[0], self.activity_shape[1]) )
+        pet.set_activity_size( (self.activity_size[0], self.activity_size[1]) )
+        
+        # extract slice of prompts, scatter, randoms, sensitivity
+        prompts = zeros([pet.binning.N_axial, pet.binning.N_u, N_time_bins + 1], dtype=float32)
+        randoms = zeros([pet.binning.N_axial, pet.binning.N_u, N_time_bins + 1], dtype=float32)
+        scatter = zeros([pet.binning.N_axial, pet.binning.N_u, N_time_bins + 1], dtype=float32)
+        sensitivity = ones([pet.binning.N_axial, pet.binning.N_u, N_time_bins + 1],dtype=float32)
+        attenuation_projection = ones([pet.binning.N_axial, pet.binning.N_u, N_time_bins + 1],dtype=float32)
+        for t in range(N_time_bins): 
+            if hasattr(self[t], "prompts"): 
+                if self[t].prompts is not None: 
+                    prompts[:,:,t+1] = self[t].prompts.to_nd_array()[:,azimuthal_index,:,slices].sum(0).squeeze()
+        for t in range(N_time_bins): 
+            if hasattr(self[t], "randoms"): 
+                if self[t].randoms is not None: 
+                    randoms[:,:,t+1] = self[t].randoms.to_nd_array()[:,azimuthal_index,:,slices].sum(0).squeeze()
+        # FIXME: implement scatter scale in PET_Static_Scan and use it here; 
+        # this will reduce memory for scatter by storing scatter projection only once. 
+        for t in range(N_time_bins): 
+            if hasattr(self[t], "scatter"): 
+                if self[t].scatter is not None: 
+                    scatter[:,:,t+1] = self[t].scatter.to_nd_array()[:,azimuthal_index,:,slices].sum(0).squeeze()
+        for t in range(N_time_bins): 
+            if hasattr(self[t], "sensitivity"): 
+                if self[t].sensitivity is not None: 
+                    sensitivity[:,:,t+1] = self[t].sensitivity.to_nd_array()[:,azimuthal_index,:,slices].mean(0).squeeze() 
+
+        # project attenuation and extract slice of the projection
+        # FIXME: implement .set_attenuation_projection() in PET_Static_SCAN and use in recon if loaded 
+        if hasattr(self,"attenuation_projection"):
+            if self.attenuation_projection is not None: 
+                att = self.attenuation_projection.to_nd_array()[:,azimuthal_index,:,slices].mean(0).squeeze()
+                for t in range(N_time_bins): 
+                    attenuation_projection[:,:,t+1] = att 
+        
+        prompts = PET_Projection( pet.binning, prompts) 
+        randoms = PET_Projection( pet.binning, randoms) 
+        sensitivity = PET_Projection( pet.binning, sensitivity) 
+        scatter = PET_Projection( pet.binning, scatter) 
+        attenuation_projection = PET_Projection( pet.binning, attenuation_projection)
+        
+        pet.set_prompts(prompts)
+        pet.set_scatter(scatter)
+        pet.set_randoms(randoms)
+        pet.set_sensitivity(sensitivity)
+        pet.set_attenuation_projection(attenuation_projection)
+        
+        prompts_duration = ones([N_time_bins+1,])
+        scatter_duration = ones([N_time_bins+1,])
+        for t in range(N_time_bins): 
+            prompts_duration[1+t] = self[t].prompts.get_duration()
+            scatter_duration[1+t] = self[t].scatter.get_duration()
+        pet.set_prompts_duration(prompts_duration)
+        pet.set_scatter_duration(scatter_duration)
+        
+        return pet
+        
+    def _construct_ilang_model(self):
+        # define the ilang probabilistic model 
+        self.ilang_model = PET_Dynamic_Poisson(self)  
+        # construct the Directed Acyclical Graph
+        self.ilang_graph         = ProbabilisticGraphicalModel(['lambda','alpha','counts']) 
+        #self.ilang_graph.set_nodes_given(['counts','alpha'],True) 
+        #self.ilang_graph.add_dependence(self.ilang_model,{'lambda':'lambda','alpha':'alpha','z':'counts'}) 
+
     def __repr__(self): 
         """Display information about Dynamic_PET_Scan"""
         s = "Dynamic PET acquisition:  \n" 
@@ -1617,7 +2275,6 @@ class PET_Dynamic_Scan():
             s = s+"     - N_v:                      %s \n"%self.binning.N_v
         return s
 
-
     def _repr_html_(self): 
         if not has_ipy_table: 
             return "Please install ipy_table."
@@ -1646,12 +2303,128 @@ class PET_Dynamic_Scan():
         """This method makes the object addressable like a list. """
         return self._dynamic[i] 
 
-    def __del__(self):
-        """Delete interface when the object is deleted: interface needs explicit 
-        deletion in order to manage C library memory deallocation  """
-        self.scanner.free_memory()
+    def __len__(self):
+        return len(self._dynamic)
+
 
         
         
 
+
+        
+class PET_Cyclic_Scan(PET_Dynamic_Scan): 
+    """PET Cyclic Scan. This is useful for respiratory gated imaging and for cardiac gated imaging (or both)."""
+    
+    def __init__(self): 
+        PET_Dynamic_Scan.__init__(self)
+        
+    def import_listmode(self, hdr_filename, time_range_matrix_ms, data_filename=None, display_progress=False ): 
+        """Load cyclic measurement data from a listmode file. """
+        print_debug("- Loading static PET data from listmode file "+str(hdr_filename) )
+        hdr = Interfile.load(hdr_filename) 
+        #Extract information from the listmode header
+
+        # 1) Guess the path of the listmode data file, if not specified or mis-specified; 
+        #  1 - see if the specified listmode data file exists 
+        if data_filename is not None: 
+            data_filename = data_filename.replace("/",os.path.sep).replace("\\",os.path.sep) # cross platform compatibility 
+            if not os.path.exists(data_filename): 
+                raise FileNotFound("listmode data",data_filename)  
+        #  2 - if the listmode data file is not specified, try with the name (and full path) 
+        #      contained in the listmode header
+        data_filename      = hdr['name of data file']['value']
+        data_filename = data_filename.replace("/",os.path.sep).replace("\\",os.path.sep) # cross platform compatibility
+        if not os.path.exists(data_filename): 
+        #  3 - if it doesn't exist, look in the same path as the header file for the listmode data 
+        #      file with name specified in the listmode header file 
+            data_filename = os.path.split(hdr_filename)[0]+os.path.sep+os.path.split(data_filename)[-1]  
+            if not os.path.exists(data_filename): 
+        #  4 - if it doesn't exist, look in the same path as the header file for the listmode data 
+        #      file with same name as the listmode header file, replacing the extension: ".l.hdr -> .l" 
+                if hdr_filename.endswith(".l.hdr"): 
+                    data_filename = hdr_filename.replace(".l.hdr",".l") 
+                    if not os.path.exists(data_filename):     
+                        raise FileNotFound("listmode data",data_filename)  
+        #  5 - if it doesn't exist, look in the same path as the header file for the listmode data 
+        #      file with same name as the listmode header file, replacing the extension: ".hdr -> .l" 
+                elif hdr_filename.endswith(".hdr"): 
+                    data_filename = hdr_filename.replace(".hdr",".l") 
+                    if not os.path.exists(data_filename):     
+                        raise FileNotFound("listmode data",data_filename)  
+           
+        # 2) Determine duration of the acquisition 
+        n_packets              = hdr['total listmode word counts']['value'] 
+        scan_duration          = hdr['image duration']['value']*1000            # milliseconds
+        
+        # 3) determine scanner parameters
+        n_radial_bins          = hdr['number of projections']['value'] 
+        n_angles               = hdr['number of views']['value'] 
+        n_rings                = hdr['number of rings']['value'] 
+        max_ring_diff          = hdr['maximum ring difference']['value']
+        n_sinograms            = n_rings+2*n_rings*max_ring_diff-max_ring_diff**2-max_ring_diff
+        n_frames      = time_range_matrix_ms.shape[0] 
+        n_cycles      = time_range_matrix_ms.shape[1] 
+
+        # 4) Display information 
+        print_debug(" - Number of packets:    %d       "%n_packets )
+        print_debug(" - Scan duration:        %d [sec] "%(scan_duration/1000.0) )
+        print_debug(" - Listmode data file:   %s       "%data_filename )
+        print_debug(" - Listmode header file: %s       "%hdr_filename)
+        print_debug(" - n_frames :            %d       "%n_frames)
+        print_debug(" - n_cycles :            %d       "%n_cycles)
+        print_debug(" - n_radial_bins:        %d       "%n_radial_bins)
+        print_debug(" - n_angles:             %d       "%n_angles)
+        print_debug(" - n_angles:             %d       "%n_sinograms)
+
+        if display_progress: 
+            progress_bar = ProgressBar()
+            progress_callback = progress_bar.set_percentage
+        else: 
+            def progress_callback(value): 
+                pass 
+        
+        # Load the listmode data 
+        M = self.scanner.michelogram
+        R = self.scanner.listmode.load_listmode_cyclic(data_filename, time_range_matrix_ms, self.binning, n_radial_bins, 
+                                              n_angles, n_sinograms, M.span, M.segments_sizes, M.michelogram_sinogram,
+                                              M.michelogram_plane, n_packets, progress_callback) 
+        progress_callback(100) 
+
+        self._dynamic = [] 
+        for t in range(n_frames): 
+            PET_t = PET_Static_Scan() 
+            PET_t.use_compression(self._use_compression)
+            PET_t.use_gpu(self._use_gpu)
+            PET_t.set_scanner(self.scanner.__class__) 
+            PET_t.set_binning(self.binning) 
+            PET_t._load_static_measurement(t) 
+            # make list of static scans
+            self._dynamic.append(PET_t) 
+            # also make one attribut for each static scan
+            setattr(self,"frame%d"%t,self._dynamic[t]) 
+            # set activity shape and size and attenuation shape and size 
+            PET_t.set_activity_size(self.activity_size)
+            PET_t.set_activity_shape(self.activity_shape)
+            PET_t.set_attenuation_size(self.activity_size)
+            PET_t.set_attenuation_shape(self.activity_shape)
+
+        # Make a global PET_Static_Scan object 
+        self.static = PET_Static_Scan()
+        self.static.use_compression(self._use_compression)
+        self.static.use_gpu(self._use_gpu)
+        self.static.set_scanner(self.scanner.__class__) 
+        self.static.set_binning(self.binning) 
+        self.static._load_static_measurement() 
+        self.static.set_activity_size(self.activity_size)
+        self.static.set_activity_shape(self.activity_shape)
+        self.static.set_attenuation_size(self.activity_size)
+        self.static.set_attenuation_shape(self.activity_shape)
+
+        # Free structures listmode data
+        self.scanner.listmode.free_memory()
+        
+        # Construct ilang model 
+        self._construct_ilang_model()
+
+        
 

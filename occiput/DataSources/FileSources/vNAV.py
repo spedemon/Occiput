@@ -78,7 +78,7 @@ class vNAV_MPRage():
     def get_duration(self,index): 
         return self.duration[index] 
 
-    def load_data_files(self, path, from_dicom_comments=True, files_start_with=None, files_end_with=".dcm", exclude_files_end_with=['.dat','.txt','.py','.pyc','.nii','.gz','.png','.jpg','.jpeg','.eps','.hdr','.l'] ):
+    def load_data_files(self, path, from_dicom_comments=True, files_start_with=None, files_end_with=None, exclude_files_end_with=['.dat','.txt','.py','.pyc','.nii','.gz','.png','.jpg','.jpeg','.eps','.hdr','.l'] ):
         """Load vNAV dicom files from given path and extract motion information. 
         If from_dicom_comments==True, use the information stored in the dicom comments. 
         If from_dicom_comments==False, use the information stored in the dicom MOCO field. 

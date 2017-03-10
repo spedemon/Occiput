@@ -830,8 +830,8 @@ class Image3D(ImageND):
                 # FIXME: raise error 
                 print "DIV of images not in the same space. It cannot be done. "
         else: 
-            out=self.copy()
-            out.data = other/out.data
+            out = self.copy()
+            out.data = other / out.data
             return out
         return None
     

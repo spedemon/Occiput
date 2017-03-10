@@ -55,7 +55,7 @@ class Generic():
         self.angles_azimuthal                   = float32([-0.5, -0.25, 0.0, 0.25, 0.5])
         self.angles_axial                       = float32( linspace(0,pi-pi/self.N_axial,self.N_axial) )
 
-        self.scale_activity                     = 0.0005 
+        self.scale_activity                     = 1.0
 
         self.activity_N_samples_projection_DEFAULT       = 150 
         self.activity_N_samples_backprojection_DEFAULT   = 150 
@@ -71,6 +71,8 @@ class Generic():
         self.attenuation_shape_DEFAULT                      = [128,128,128] 
         self.attenuation_size_DEFAULT                       = float32([2.0, 2.0, 2.0])*float32(self.attenuation_shape_DEFAULT)
 
+        self.listmode = None
+        self.physiology = None 
 
 
 def get_scanner_by_name(name): 
