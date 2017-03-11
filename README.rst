@@ -2,32 +2,54 @@
 Occiput - Tomographic Vision
 ============================
 
-Tomographic reconstruction - 3D and 4D PET, SPECT, CT, MRI. 
+Tomographic reconstruction software for PET, PET-MRI and SPECT in 2D, 3D (volumetric) and 4D (spatio-temporal) in Python. 
+
+The software provides high-speed reconstruction using Graphics Processing Units (GPU). 
+Note: an NVidia CUDA compatible GPU is required.  
+
+Occiput can be utilized with arbitrary scanner geometries. It provides production quality image reconstruction 
+with standard algorithms (such as MLEM and OSEM) and implements advanced algorithms for motion correction, 
+kinetic imaging and for multi-modal reconstruction. 
+
+The source code contains Jupyter notebooks with examples. 
+
+A Python package implementing the interface to the Siemens Biograph mMR PET-MRI scanner 
+is available upon request and following authorization from Siemens. Please email us at occiput.reconstruction@gmail.com 
 
 
-Installation
+Installation 
 ============
 
-Linux, MacOsX, Windows
+Linux, MacOS, Windows
 ----------------------
 
-There are two ways to install under Linux and MacOsX and Windows: 
+Pre-requisites: 
 
-1. If you have pip installed: 
+Occiput requires NiftyRec libraries - GPU-accelerated ray-tracing for tomography: 
+<http://www.niftyrec.scienceontheweb.net/> 
 
-pip install occiput
+1. Install NVidia GPU drivers and CUDA: 
+    <https://developer.nvidia.com/cuda-downloads>
+    
+2. Install NiftyRec libraries: 
+    <http://niftyrec.scienceontheweb.net>
+    
+3. Make sure that CUDA libraries and NiftyRec libraries are in the system path: 
+    - Linux: 
+        export LD_LIBRARY_PATH:$LD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
+    - MacOS: 
+        export DYLD_LIBRARY_PATH:$DYLD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
+    - Windows: 
+        setx path "%path%;c:\path_to_cuda_libraries:\path_to_niftyrec_libraries;"
 
-2. Download source files; uncompress; at the command line, cd to the source folder and run: 
+4. Install occiput: 
 
-python setup.py build install 
+    python setup.py build install 
 
 
 Getting started
 ===============
-To get started, install IPython and launch the scripts in the /notebooks folder. 
-The PET reconstruction requires a CUDA-compatible GPU - but then it's really fast! 
-Thanks to the IPython and Jupyter magic and to support from Amazon AWS, it is also possible to try occiput.io 
-from the browser using GPUs in the cloud: http://www.occiput.io/try/
+To get started, install IPython and launch the scripts in the /occiput/notebooks folder. 
 
 
 Website
