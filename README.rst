@@ -7,7 +7,7 @@ Tomographic reconstruction software for PET, PET-MRI and SPECT in 2D, 3D (volume
 The software provides high-speed reconstruction using Graphics Processing Units (GPU). 
 Note: an NVidia CUDA compatible GPU is required.  
 
-Occiput can be utilized with arbitrary scanner geometries. It provides production quality image reconstruction 
+``Occiput`` can be utilized with arbitrary scanner geometries. It provides production quality image reconstruction 
 with standard algorithms (such as MLEM and OSEM) and implements advanced algorithms for motion correction, 
 kinetic imaging and for multi-modal reconstruction. 
 
@@ -20,13 +20,8 @@ is available upon request and following authorization from Siemens. Please email
 Installation 
 ============
 
-<<<<<<< HEAD
 Linux, Windows (not tested recently), MacOS
 -------------------------------------------
-=======
-Linux, Windows (not tested recently), MAC OS
---------------------------------------------
->>>>>>> origin/master
 
 Pre-requisites: 
 
@@ -58,11 +53,8 @@ To get started, install Jupyter and launch the scripts in the /occiput/notebooks
 Website
 =======
 
-<<<<<<< HEAD
 For more information see `occiput.io  <http://www.occiput.io/>`_. 
-=======
-For more information see: `occiput.io home page <http://www.occiput.io/>`_. 
->>>>>>> origin/master
+
 
 
 
