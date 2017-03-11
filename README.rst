@@ -27,9 +27,9 @@ Pre-requisites:
 
 ``Occiput`` requires ``NiftyRec`` libraries - GPU-accelerated ray-tracing for tomography. 
 
-1. `Install NVidia GPU drivers and CUDA <https://developer.nvidia.com/cuda-downloads>_`
+1. `Install NVidia GPU drivers and CUDA <https://developer.nvidia.com/cuda-downloads>`_
 
-2. `Install NiftyRec libraries <http://niftyrec.scienceontheweb.net>_` 
+2. `Install NiftyRec libraries <http://niftyrec.scienceontheweb.net>`_ 
     
 3. Make sure that CUDA libraries and NiftyRec libraries are in the system path: 
 
