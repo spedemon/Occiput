@@ -33,11 +33,17 @@ Pre-requisites:
 2. `Install NiftyRec libraries <http://niftyrec.scienceontheweb.net>` 
     
 3. Make sure that CUDA libraries and NiftyRec libraries are in the system path: 
-- Linux: 
+
+ - Linux: 
+ 
     export LD_LIBRARY_PATH:$LD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
-- MacOS: 
+    
+ - MacOS: 
+
     export DYLD_LIBRARY_PATH:$DYLD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
-- Windows: 
+
+ - Windows: 
+
     setx path "%path%;c:\path_to_cuda_libraries:\path_to_niftyrec_libraries;"
 
 4. Install ``Occiput``: 
