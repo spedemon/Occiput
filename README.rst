@@ -20,8 +20,13 @@ is available upon request and following authorization from Siemens. Please email
 Installation 
 ============
 
+<<<<<<< HEAD
 Linux, Windows (not tested recently), MacOS
 -------------------------------------------
+=======
+Linux, Windows (not tested recently), MAC OS
+--------------------------------------------
+>>>>>>> origin/master
 
 Pre-requisites: 
 
@@ -53,7 +58,11 @@ To get started, install Jupyter and launch the scripts in the /occiput/notebooks
 Website
 =======
 
+<<<<<<< HEAD
 For more information see `occiput.io  <http://www.occiput.io/>`_. 
+=======
+For more information see: `occiput.io home page <http://www.occiput.io/>`_. 
+>>>>>>> origin/master
 
 
 
