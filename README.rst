@@ -20,42 +20,40 @@ is available upon request and following authorization from Siemens. Please email
 Installation 
 ============
 
-Linux, MacOS, Windows
-----------------------
+Linux, Windows (not tested recently), MacOS
+-------------------------------------------
 
 Pre-requisites: 
 
-Occiput requires NiftyRec libraries - GPU-accelerated ray-tracing for tomography: 
+``Occiput`` requires ``NiftyRec`` libraries - GPU-accelerated ray-tracing for tomography: 
 <http://www.niftyrec.scienceontheweb.net/> 
 
-1. Install NVidia GPU drivers and CUDA: 
-    <https://developer.nvidia.com/cuda-downloads>
-    
-2. Install NiftyRec libraries: 
-    <http://niftyrec.scienceontheweb.net>
+1. `Install NVidia GPU drivers and CUDA <https://developer.nvidia.com/cuda-downloads>`
+
+2. `Install NiftyRec libraries <http://niftyrec.scienceontheweb.net>` 
     
 3. Make sure that CUDA libraries and NiftyRec libraries are in the system path: 
-    - Linux: 
-        export LD_LIBRARY_PATH:$LD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
-    - MacOS: 
-        export DYLD_LIBRARY_PATH:$DYLD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
-    - Windows: 
-        setx path "%path%;c:\path_to_cuda_libraries:\path_to_niftyrec_libraries;"
+- Linux: 
+    export LD_LIBRARY_PATH:$LD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
+- MacOS: 
+    export DYLD_LIBRARY_PATH:$DYLD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
+- Windows: 
+    setx path "%path%;c:\path_to_cuda_libraries:\path_to_niftyrec_libraries;"
 
-4. Install occiput: 
+4. Install ``Occiput``: 
 
     python setup.py build install 
 
 
 Getting started
 ===============
-To get started, install IPython and launch the scripts in the /occiput/notebooks folder. 
+To get started, install Jupyter and launch the scripts in the /occiput/notebooks folder. 
 
 
 Website
 =======
 
-`occiput.io home page <http://www.occiput.io/>`_. 
+For more information see `occiput.io  <http://www.occiput.io/>`_. 
 
 
 

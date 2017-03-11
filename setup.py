@@ -61,8 +61,6 @@ setup(
                      ],
     install_requires=[
         "numpy >= 1.6.0", 
-        #"scipy >= 0.14.0",
-        #"pil >= 1.0.0",
         "matplotlib >= 1.4.0",
         "simplewrap >= 0.3.0",
         "petlink >= 0.3.0",  
@@ -75,6 +73,8 @@ setup(
         "nipy >= 0.3.0",
         "ipython >= 2.0.0",
         "h5py >= 2.3.0",
+        "scipy >= 0.14.0",
+        "Pillow >= 2.8.0",
     ], 
 ) 
 
