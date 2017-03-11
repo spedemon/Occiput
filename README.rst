@@ -20,8 +20,8 @@ is available upon request and following authorization from Siemens. Please email
 Installation 
 ============
 
-Linux, MacOS, Windows
-----------------------
+Linux, Windows (not tested recently), MAC OS
+--------------------------------------------
 
 Pre-requisites: 
 
@@ -55,7 +55,7 @@ To get started, install IPython and launch the scripts in the /occiput/notebooks
 Website
 =======
 
-`occiput.io home page <http://www.occiput.io/>`_. 
+For more information see: `occiput.io home page <http://www.occiput.io/>`_. 
 
 
 
