@@ -51,12 +51,12 @@ Pre-requisites: ``Occiput`` requires ``NVidia GPU Drivers`, ``NVidia CUDA`` and 
 Getting started
 ===============
 Examples and demos of the features of Occiput are in the /occiput/notebooks folder. 
-To get started, install ``Python Jupyter`` and open the scripts in /occiput/notebooks. 
+To get started, install ``Python Jupyter`` and open the scripts in 
+`/occiput/notebooks <https://github.com/spedemon/occiput/tree/master/occiput/notebooks>`_
 
 
 Website
 =======
-
 For more information see `occiput.io  <http://www.occiput.io/>`_. 
 
 
