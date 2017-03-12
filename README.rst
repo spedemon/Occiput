@@ -13,7 +13,7 @@ kinetic imaging and for multi-modal reconstruction.
 
 The source code contains Jupyter notebooks with examples. 
 
-A Python package implementing the interface to the Siemens Biograph mMR PET-MRI scanner 
+A Python package implementing the interface to the ``Siemens Biograph mMR`` PET-MRI scanner 
 is available upon request and following authorization from Siemens. Please email us at occiput.reconstruction@gmail.com 
 
 
@@ -23,11 +23,9 @@ Installation
 Linux, Windows (not tested recently), MacOS
 -------------------------------------------
 
-Pre-requisites: 
+Pre-requisites: ``Occiput`` requires ``NVidia GPU Drivers`, ``NVidia CUDA`` and the ``NiftyRec`` GPU accelerated tomographic ray-tracing library. 
 
-``Occiput`` requires ``NiftyRec`` libraries - GPU-accelerated ray-tracing for tomography. 
-
-1. `Install NVidia GPU drivers and CUDA <https://developer.nvidia.com/cuda-downloads>`_
+1. `Install NVidia GPU Drivers and CUDA <https://developer.nvidia.com/cuda-downloads>`_
 
 2. `Install NiftyRec libraries <http://niftyrec.scienceontheweb.net>`_ 
     
@@ -35,15 +33,15 @@ Pre-requisites:
 
  - Linux: 
  
-    export LD_LIBRARY_PATH:$LD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
+    export LD_LIBRARY_PATH:$LD_LIBRARY_PATH:/path_to_cuda_libraries:/path_to_niftyrec_libraries
     
  - MacOS: 
 
-    export DYLD_LIBRARY_PATH:$DYLD_LIBRARY_PATH:\path_to_cuda_libraries:/path_to_niftyrec_libraries
+    export DYLD_LIBRARY_PATH:$DYLD_LIBRARY_PATH:/path_to_cuda_libraries:/path_to_niftyrec_libraries
 
  - Windows: 
 
-    setx path "%path%;c:\path_to_cuda_libraries:\path_to_niftyrec_libraries;"
+    setx path "%path%;c:/path_to_cuda_libraries:/path_to_niftyrec_libraries;"
 
 4. Install ``Occiput``: 
 
@@ -52,7 +50,8 @@ Pre-requisites:
 
 Getting started
 ===============
-To get started, install Jupyter and launch the scripts in the /occiput/notebooks folder. 
+Examples and demos of the features of Occiput are in the /occiput/notebooks folder. 
+To get started, install ``Python Jupyter`` and open the scripts in /occiput/notebooks. 
 
 
 Website
