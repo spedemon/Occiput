@@ -19,7 +19,7 @@ from glob import glob
 
 setup(
     name='occiput',
-    version='1.0.8',
+    version='1.0.9',
     author='Stefano Pedemonte',
     author_email='stefano.pedemonte@gmail.com',
     packages=['occiput', 
