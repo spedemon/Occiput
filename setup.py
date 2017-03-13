@@ -19,7 +19,7 @@ from glob import glob
 
 setup(
     name='occiput',
-    version='1.0.0',
+    version='1.0.8',
     author='Stefano Pedemonte',
     author_email='stefano.pedemonte@gmail.com',
     packages=['occiput', 
@@ -57,12 +57,12 @@ setup(
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Medical Science Apps.",
         "Topic :: Scientific/Engineering :: Mathematics",
-        "Topic :: Scientific/Engineering :: Bio-Informatics",
-                     ],
+        "Topic :: Scientific/Engineering :: Bio-Informatics" ],
     install_requires=[
-        "numpy >= 1.6.0", 
+        "numpy >= 1.12.0", 
         "matplotlib >= 1.4.0",
         "simplewrap >= 0.3.0",
+        "NiftyPy >= 0.4.0",
         "petlink >= 0.3.0",  
         "interfile >= 0.3.0", 
         "DisplayNode >= 0.3.0", 
@@ -71,11 +71,11 @@ setup(
         "nibabel >= 2.0.0",  
         "pydicom >= 0.9.0",
         "nipy >= 0.3.0",
-        "ipython >= 2.0.0",
+        "jupyter >= 1.0.0",
         "h5py >= 2.3.0",
         "scipy >= 0.14.0",
-        "Pillow >= 2.8.0",
-    ], 
+        "pillow >= 2.8.0",
+        "svgwrite >= 1.1.0" ] 
 ) 
 
 

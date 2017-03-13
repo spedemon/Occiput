@@ -45,6 +45,8 @@ Pre-requisites: ``Occiput`` requires ``NVidia GPU Drivers`, ``NVidia CUDA`` and 
 
 4. Install ``Occiput``: 
 
+    git clone https://github.com/spedemon/occiput.git 
+
     python setup.py build install 
 
 
