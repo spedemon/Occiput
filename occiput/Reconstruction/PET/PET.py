@@ -712,8 +712,11 @@ class PET_Static_Scan():
             prompts = self.prompts.to_nd_array()[index_axial,index_azimuthal,:,index_bin]
         else: 
             prompts = 0.0 
-        if self.sensitivity is not None and not isscalar(self.sensitivity): 
-            sensitivity = self.sensitivity.to_nd_array()[index_axial,index_azimuthal,:,index_bin]
+        if self.sensitivity is not None:
+            if not isscalar(self.sensitivity): 
+                sensitivity = self.sensitivity.to_nd_array()[index_axial,index_azimuthal,:,index_bin]
+            else: 
+                sensitivity = self.sensitivity
         else: 
             sensitivity = 1.0 
         if self.scatter is not None and not isscalar(self.scatter): 
@@ -1433,6 +1436,8 @@ class PET_Static_Scan():
             sens_x_att  = self.sensitivity.get_subset(subsets_matrix) * attenuation_projection
         else: 
             sens_x_att   = attenuation_projection
+        if isscalar(sens_x_att): 
+            sens_x_att = sens_x_att*ones(prompts.data.shape, dtype=float32)
     
         if self.randoms is not None: 
             randoms = self.randoms 
@@ -1647,9 +1652,7 @@ class PET_Multi2D_Scan(PET_Static_Scan):
             activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
         
         if self.sensitivity is None: 
-            sensitivity = self.prompts.copy()
-            sensitivity.data = 0.0*sensitivity.data+1
-            self.set_sensitivity(sensitivity)
+            self.set_sensitivity(1.0)
         
         for i in range(iterations):
             print i
@@ -1679,7 +1682,10 @@ class PET_Multi2D_Scan(PET_Static_Scan):
             attenuation_projection = 1.0
         
         if self.sensitivity is not None: 
-            sens_x_att  = self.sensitivity.get_subset(subsets_matrix) * attenuation_projection
+            if isscalar(self[t].sensitivity): 
+                sens_x_att  = self[t].sensitivity * attenuation_projection
+            else:
+                sens_x_att  = self.sensitivity.get_subset(subsets_matrix) * attenuation_projection
         else: 
             sens_x_att   = attenuation_projection
     
@@ -1725,8 +1731,11 @@ class PET_Multi2D_Scan(PET_Static_Scan):
             prompts = self.prompts.to_nd_array()[index_axial,index_azimuthal,:,index_slice+1]
         else: 
             prompts = 0.0 
-        if self.sensitivity is not None and not isscalar(self.sensitivity): 
-            sensitivity = self.sensitivity.to_nd_array()[index_axial,index_azimuthal,:,index_slice+1]
+        if self.sensitivity is not None:
+            if not isscalar(self.sensitivity): 
+                sensitivity = self.sensitivity.to_nd_array()[index_axial,index_azimuthal,:,index_slice+1]
+            else: 
+                sensitivity = self.sensitivity
         else: 
             sensitivity = 1.0 
         if self.scatter is not None and not isscalar(self.scatter): 
@@ -2105,63 +2114,86 @@ class PET_Dynamic_Scan(PET_Static_Scan):
     def osem_reconstruction_4D(self, iterations=10, activity=None, subset_mode="random", subset_size=64, transformations=None):
         if activity is None: 
             activity = self._make_Image3D_activity(ones(self.activity_shape,dtype=float32,order="F")) 
-            subsets_generator = SubsetGenerator(self.binning.N_azimuthal, self.binning.N_axial)
-
-        attenuation_projection = None 
         
         if self.sensitivity is None: 
-            sensitivity = self.prompts.copy()
-            sensitivity.data = 0.0*sensitivity.data+1
-            self.set_sensitivity(sensitivity)
+            self.set_sensitivity(1.0)
+        
+        subsets_generator = SubsetGenerator(self.binning.N_azimuthal, self.binning.N_axial)
         
         for i in range(iterations):
             print i
-            subsets_matrix = subsets_generator.new_subset(subset_mode, subset_size)
-            #subsets_matrix = ones([11,252])
-            activity = self.osem_step_4D(activity, subsets_matrix, attenuation_projection, transformations)
+            activity = self.osem_step_4D(activity, subsets_generator, subset_mode, subset_size, transformations)
         return activity
     
-    def osem_step_4D(self, activity, subsets_matrix, attenuation_projection, transformations): 
-        print "Not implemented - please implement"
-        return 
-    
+    def osem_step_4D(self, activity, subsets_generator, subset_mode="random", subset_size=64, transformations=None): 
         epsilon = 1e-08
-        if attenuation_projection is not None: 
-            attenuation_projection = attenuation_projection.get_subset(subsets_matrix)
-        else: 
-            attenuation_projection = 1.0
-        
-        if self.sensitivity is not None: 
-            sens_x_att  = self.sensitivity.get_subset(subsets_matrix) * attenuation_projection
-        else: 
-            sens_x_att   = attenuation_projection
-    
-        if self.randoms is not None: 
-            mrandoms     = self.randoms.get_subset(subsets_matrix) / (sens_x_att + epsilon) 
-        
-        if self.scatter is not None: 
-            mscatter     = (self.scatter.get_subset(subsets_matrix) + epsilon) / (attenuation_projection + epsilon)
+        norm    = self._make_Image3D_activity(zeros(self.activity_shape,dtype=float32,order="F")) 
+        update1 = self._make_Image3D_activity(zeros(self.activity_shape,dtype=float32,order="F")) 
 
-        norm = self.backproject_activity(sens_x_att, transformation=transformation)
-    
-        projection = self.project_activity(activity, subsets_matrix = subsets_matrix, transformation=transformation)
-    
-        if self.randoms is not None: 
-            if self.scatter is not None:
-                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + mrandoms + mscatter + epsilon), transformation=transformation)
+        for t in range(len(self)): 
+            subsets_matrix = subsets_generator.new_subset(subset_mode, subset_size)
+        
+            prompts = self[t].prompts 
+            if self[t]._use_compression: 
+                prompts = prompts.uncompress_self()
+        
+            duration_ms = prompts.get_duration() 
+            if duration_ms is None: 
+                duration_ms = 1000*60*60 
+            duration = duration_ms / 1000.0 
+            alpha = self[t].scale_activity
+        
+            # Compute projections of the attenuation map on the fly; too memory consuming to precompute the 
+            # projection for each time frame - precomputing makes PET_Static_Scan more efficient, but in Dynamic, it 
+            # requires too much memory in practical applications. 
+            
+            if self[t].attenuation is not None:
+                attenuation_projection = self[t].project_attenuation(self[t].attenuation)
+                attenuation_projection = attenuation_projection.get_subset(subsets_matrix)
             else: 
-                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + mrandoms + epsilon), transformation=transformation)
+                attenuation_projection = 1.0
+        
+            if self[t].sensitivity is not None: 
+                if isscalar(self[t].sensitivity): 
+                    sens_x_att  = self[t].sensitivity * attenuation_projection
+                else:
+                    sens_x_att  = self[t].sensitivity.get_subset(subsets_matrix) * attenuation_projection
+            else: 
+                sens_x_att   = attenuation_projection
+            if isscalar(sens_x_att): 
+                sens_x_att = sens_x_att*ones(prompts.data.shape, dtype=float32)
     
-        else:
-            if self.scatter is not None: 
-                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + mscatter + epsilon), transformation=transformation)
-            else:
-                update1 = self.backproject_activity(self.prompts.get_subset(subsets_matrix)/(projection + epsilon), transformation=transformation)
-    
-        #activity = activity - gradient1
-        activity = (activity /(norm+epsilon)) * update1
+            if self[t].randoms is not None: 
+                randoms = self.randoms 
+                if self[t]._use_compression: 
+                    randoms = randoms.uncompress_self()
+                randoms = (randoms.get_subset(subsets_matrix) + epsilon) / (sens_x_att * alpha * duration + epsilon) 
+        
+            if self[t].scatter is not None: 
+                mscatter     = (self.scatter.get_subset(subsets_matrix) + epsilon) / (attenuation_projection * alpha * duration + epsilon)
+                # Scale scatter: this is used in dynamic and kinetic imaging, when scatter is calculated using the ativity for a time period longer than the current frame: 
+                if self[t].scatter.get_duration() is not None: 
+                    if self[t].scatter.get_duration() > 1e-6: 
+                        mscatter = mscatter * duration / self[t].scatter.get_duration()
 
-        return activity    
+            norm += self[t].backproject_activity(sens_x_att * alpha * duration, transformation=transformations[t])
+    
+            projection = self[t].project_activity(activity, subsets_matrix = subsets_matrix, transformation=transformations[t])
+    
+            if self[t].randoms is not None: 
+                if self[t].scatter is not None:
+                    update1 += self[t].backproject_activity(prompts.get_subset(subsets_matrix)/(projection + randoms + mscatter + epsilon), transformation=transformations[t])
+                else: 
+                    update1 += self[t].backproject_activity(prompts.get_subset(subsets_matrix)/(projection + randoms + epsilon), transformation=transformations[t])
+    
+            else:
+                if self[t].scatter is not None: 
+                    update1 += self[t].backproject_activity(prompts.get_subset(subsets_matrix)/(projection + mscatter + epsilon), transformation=transformations[t])
+                else:
+                    update1 += self[t].backproject_activity(prompts.get_subset(subsets_matrix)/(projection + epsilon), transformation=transformations[t])
+    
+        activity = (activity /(norm+epsilon)) * update1
+        return activity   
     
     
 
