@@ -5,16 +5,19 @@ Occiput - Tomographic Vision
 Tomographic reconstruction software for PET, PET-MRI and SPECT in 2D, 3D (volumetric) and 4D (spatio-temporal) in Python. 
 
 The software provides high-speed reconstruction using Graphics Processing Units (GPU). 
-Note: an NVidia CUDA compatible GPU is required.  
+Note: an NVidia CUDA-compatible GPU is required.  
 
-``Occiput`` can be utilized with arbitrary scanner geometries. It provides production quality image reconstruction 
-with standard algorithms (such as MLEM and OSEM) and implements advanced algorithms for motion correction, 
-kinetic imaging and for multi-modal reconstruction. 
+``Occiput`` can be utilized with arbitrary scanner geometries. It can be utilized for abstract tomographic 
+reconstruction experiments to develop new algorithms and explore new system geometries, or to connect to real-world scanners, 
+providing production quality image reconstruction with standard algorithms (such as MLEM and OSEM). 
 
+``Occiput`` implements advanced algorithms for motion correction, kinetic imaging, multi-modal reconstruction, respiratory and cardiac gated imaging. 
 The source code contains Jupyter notebooks with examples. 
 
-A Python package implementing the interface to the ``Siemens Biograph mMR`` PET-MRI scanner 
-is available upon request and following authorization from Siemens. Please email us at occiput.reconstruction@gmail.com 
+A Python extension package ``Occiput_Interface_Biograph_mMR``, implementing the interface to the Siemens Biograph mMR PET-MRI scanner 
+is available upon request and following authorization from Siemens. Notebooks containing Biograph_mMR in the title can 
+only be executed after installing the extension package. 
+Please email us at occiput.reconstruction@gmail.com 
 
 
 Installation 
