@@ -3,3 +3,4 @@
 build
 dist
 occiput.egg-info
+occiput/notebooks/.ipynb_checkpoints
