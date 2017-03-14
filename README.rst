@@ -57,8 +57,9 @@ Getting started
 ===============
 Examples and demos of the features of Occiput are in the /occiput/notebooks folder. 
 To get started, install ``Python Jupyter`` and open the scripts in 
-`/occiput/notebooks <https://github.com/spedemon/occiput/tree/master/occiput/notebooks>`_
-
+`/occiput/notebooks <https://github.com/spedemon/occiput/tree/master/occiput/notebooks>`_. The 
+notebook `/occiput/notebooks/DOCUMENTATION.ipynb <https://github.com/spedemon/occiput/tree/master/occiput/notebooks/DOCUMENTATION.ipynb>`_ contains 
+an index and short description of the notebooks. 
 
 Website
 =======
