@@ -15,12 +15,11 @@ import copy
 
 from occiput.Visualization import MultipleVolumes, MultipleVolumesNiftyPy, VolumeRenderer
 from occiput.Visualization import ipy_table, has_ipy_table
-from occiput.Core import transformations as tr 
 from occiput import global_settings 
 from occiput.global_settings import printoptions
 from occiput.Core.NiftyPy_wrap import transform_grid, grid_from_box_and_affine, resample_image_on_grid, INTERPOLATION_LINEAR, INTERPOLATION_POINT
 from occiput.Core.Conversion import nipy_to_occiput, nifti_to_occiput, occiput_to_nifti, occiput_from_array
-
+import transformations as tr
 
 
 
