@@ -63,7 +63,7 @@ an index and short description of the notebooks.
 
 Website
 =======
-For more information see `occiput.io  <http://www.occiput.io/>`_. 
+For more information see `occiput.io  <http://www.tomographylab.scienceontheweb.net/>`_. 
 
 
 
