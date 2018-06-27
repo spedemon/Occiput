@@ -1,9 +1,7 @@
-
+# -*- coding: utf-8 -*-
 # occiput  
-# Stefano Pedemonte
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Apr. 2014, Boston, MA
-
+# Aalto University, Department of Computer Science
 
 import numpy
 from .ilang_models import SSD_ilang

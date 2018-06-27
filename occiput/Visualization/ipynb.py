@@ -1,4 +1,7 @@
-
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 def is_in_ipynb(): 
     try:

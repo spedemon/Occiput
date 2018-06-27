@@ -1,12 +1,7 @@
-#!/usr/bin/python
-# -*- coding: UTF-8 -*-
-          
-# occiput 
-# Stefano Pedemonte
-# Aalto University, School of Science, Helsinki
-# Oct 2013, Helsinki 
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Boston, MA, USA
+# Aalto University, Department of Computer Science
 
 
 from occiput.Visualization.Visualization import ProgressBar

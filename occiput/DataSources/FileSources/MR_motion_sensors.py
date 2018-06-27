@@ -1,8 +1,7 @@
-
-# occiput 
-# March 2015 
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Boston, MA, USA 
+# Aalto University, Department of Computer Science
 
 
 __all__ = ['load_motion_sensor_data'] 

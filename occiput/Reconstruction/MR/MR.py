@@ -1,7 +1,8 @@
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
-# occiput 
-# Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
-# March 2015, Boston
 
 __all__ = ['KSpace', 'MR_Static_Scan', 'MR_Dynamic_Scan'] 
 

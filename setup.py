@@ -1,10 +1,8 @@
-
+# -*- coding: utf-8 -*-
 # occiput - Computational engine for volumetric imaging 
 # Stefano Pedemonte
 # Aalto University 
 # Harvard University, Martinos Center for Biomedical Imaging 
-# 2012 - 2014, Helsinki, FI
-# 2013 - 2017, Boston, MA, USA
 
 
 # Use old Python build system, otherwise the extension libraries cannot be found. FIXME 
@@ -19,7 +17,7 @@ from glob import glob
 
 setup(
     name='occiput',
-    version='1.0.12',
+    version='1.2.0',
     author='Stefano Pedemonte',
     author_email='stefano.pedemonte@gmail.com',
     packages=['occiput', 

@@ -1,12 +1,7 @@
-
-# occiput 
-# Stefano Pedemonte
-# Aalto University, School of Science, Helsinki
-# Oct 2014, Helsinki 
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Boston, MA, USA
-# April 2014
-# Nov. 2015 
+# Aalto University, Department of Computer Science
 
 
 # Import an interfile volume as an Image3D and export. 

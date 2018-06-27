@@ -1,10 +1,7 @@
-
-# occiput 
-# Stefano Pedemonte 
-# April 2014 
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Boston, MA, USA 
-# Nov. 2015 
+# Aalto University, Department of Computer Science
 
 
 __all__ = ['import_interfile_projection','export_interfile_projection','import_interfile_volume',

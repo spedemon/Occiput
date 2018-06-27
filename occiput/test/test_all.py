@@ -1,14 +1,10 @@
-
-# occiput
-# Stefano Pedemonte
-# Harvard University / MGH
-# Boston, Jan 2015
-
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 from .. import occiput
-
 import unittest
-
 
 class Test_Reconstruction_PET(unittest.TestCase): 
     """Sequence of tests for tomographic reconstruction - Positron Emission Tomography."""

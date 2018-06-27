@@ -1,9 +1,7 @@
-
-# occiput.io 
-# Stefano Pedemonte
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# 2013 - 2015
-# Boston, MA
+# Aalto University, Department of Computer Science
 
 
 # Abstraction of a PET scanner: probabilistic graphical model

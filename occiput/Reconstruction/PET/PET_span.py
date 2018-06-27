@@ -1,9 +1,7 @@
-
-# occiput.io 
-# Stefano Pedemonte
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# 2013 - 2015
-# Boston, MA
+# Aalto University, Department of Computer Science
 
 
 # Occiput.io does not like the concepts of sinogram-span and meshing. 

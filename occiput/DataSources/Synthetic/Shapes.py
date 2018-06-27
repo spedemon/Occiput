@@ -1,14 +1,7 @@
-
-# occiput 
-# Stefano Pedemonte
-# Aalto University, School of Science, Helsinki
-# Oct 2013, Helsinki 
-# Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
-# Dec. 2013, Boston
-
-
-#__all__ = ['uniform_sphere','uniform_cylinder','uniform_spheres_ring']
-
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 
 from occiput.Core import Image3D as __Image3D

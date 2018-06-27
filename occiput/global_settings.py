@@ -1,16 +1,21 @@
-
-# occiput - Inference Language 
-# Stefano Pedemonte
-# Aalto University, School of Science, Helsinki
-# Oct 2013, Helsinki 
-# Harvard University, Martinos Center for Biomedical Imaging, Boston
-# Dec 2013, Boston, MA, USA 
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 
-
-
-# Print with 3 levels of verbosity 
-
+# GPU enables / disable
+__use_gpu = True 
+def enable_gpu():
+    global __use_gpu; __use_gpu = True
+def disable_gpu():
+    global __use_gpu; __use_gpu = False 
+def is_gpu_enabled():
+    global __use_gpu
+    return __use_gpu
+    
+    
+# Set level of verbosity when printing to stdout - for debugging
 __verbose = 1
 def set_verbose_high(): 
     """Print everything - DEBUG mode"""
@@ -41,7 +46,6 @@ def print_important(msg):
 
 
 # Other print options 
-
 import contextlib as __contextlib
 import numpy as __numpy
 @__contextlib.contextmanager
@@ -52,22 +56,7 @@ def printoptions(*args, **kwargs):
     __numpy.set_printoptions(**original)
 
 
-
-# GPU enables / disable
-
-__use_gpu = True 
-def enable_gpu():
-    global __use_gpu; __use_gpu = True
-def disable_gpu():
-    global __use_gpu; __use_gpu = False 
-def is_gpu_enabled():
-    global __use_gpu
-    return __use_gpu
-
-
-
 # Default background of images
-
 __background = 0.0
 def set_default_background(bg):
     global __background; __background = bg

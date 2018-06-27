@@ -1,4 +1,7 @@
-
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 LIGHT_BLUE   = 'rgb(200,228,246)'
 BLUE         = 'rgb(47,128,246)'

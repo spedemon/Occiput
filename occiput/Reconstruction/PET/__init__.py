@@ -1,8 +1,6 @@
-
-# occiput - Tomographic Inference 
-# Stefano Pedemonte
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Dec. 2013, Boston, MA
-
+# Aalto University, Department of Computer Science
 
 from PET import * 

@@ -1,9 +1,7 @@
+# -*- coding: utf-8 -*-
 # occiput  
-# Stefano Pedemonte
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Dec. 2014, Boston, MA 
-# April. 2014, Boston, MA
-
+# Aalto University, Department of Computer Science
 
 import occiput as __occiput
 import nibabel as __nibabel

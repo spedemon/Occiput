@@ -1,9 +1,7 @@
-
-# occiput   
-# Stefano Pedemonte
-# Harvard University, Martinos Center for Biomedical Imaging
-# Jan 2014, Boston, MA, USA 
-
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 __all__ = ['RigidTransformationSSD']
 

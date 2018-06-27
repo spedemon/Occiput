@@ -1,14 +1,7 @@
-
-# occiput 
-# Stefano Pedemonte
-# Aalto University, School of Science, Helsinki
-# Oct 2013, Helsinki 
-# Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
-# Dec. 2013, Boston
-# Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
-# Jan. 2015, Boston
-# Feb. 2015, Helsinki
-# Nov. 2015, Boston 
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 
 # Interface to list-mode data. In order to cope with various data formats of the list-mode data and 

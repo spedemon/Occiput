@@ -1,9 +1,7 @@
-
-# occiput.io 
-# Stefano Pedemonte
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# 2013 - 2015
-# Boston, MA
+# Aalto University, Department of Computer Science
 
 
 # Interface to the ray-tracer for projection and back-projection. 

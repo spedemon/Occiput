@@ -1,14 +1,7 @@
-
-# occiput 
-# Stefano Pedemonte
-# Aalto University, School of Science, Helsinki
-# Oct 2013, Helsinki 
-# Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
-# Dec. 2013, Boston
-# Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
-# Jan. 2015, Boston
-# June 2015, Helsinki 
-# Nov. 2015 - Mar. 2017, Boston 
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 
 # If you are looking for PET reconstruction, this is where to start. 

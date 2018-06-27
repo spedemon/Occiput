@@ -1,9 +1,7 @@
-
-# occiput.io 
-# Stefano Pedemonte
-# Martinos Center for Biomedical Imaging, Harvard University/MGH, Boston
-# Aalto University, Finland 
-# 2013-2015
+# -*- coding: utf-8 -*-
+# occiput  
+# Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 
 # Code to generate subsets for OSEM (ordered subsets expectation maximization) and algorithms of that sort, such 

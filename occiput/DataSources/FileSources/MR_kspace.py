@@ -1,11 +1,7 @@
-
-# occiput 
-# Stefano Pedemonte
-# Aalto University, School of Science, Helsinki
-# Oct 2014, Helsinki 
+# -*- coding: utf-8 -*-
+# occiput  
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Boston, MA, USA
-# March 2015
+# Aalto University, Department of Computer Science
 
 
 from occiput.DataSources.FileSources.Volume import import_nifti

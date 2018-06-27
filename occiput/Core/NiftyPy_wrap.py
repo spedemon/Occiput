@@ -1,13 +1,10 @@
-
+# -*- coding: utf-8 -*-
 # occiput  
-# Stefano Pedemonte
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Dec. 2014, Boston, MA 
-# Apr. 2014, Boston, MA
+# Aalto University, Department of Computer Science
 
 
-# FIXME: perhaps get rid of this file and place code in occiput.Transformation (mostly), although as it is now, all imports from 
-# NiftyPy are in one place (here). This is somewhat convenient to keep track of things. 
+# FIXME: consider getting rid of this file and placing code in occiput.Transformation
 
 
 import occiput as __occiput

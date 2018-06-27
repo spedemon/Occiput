@@ -1,8 +1,7 @@
-
+# -*- coding: utf-8 -*-
 # occiput  
-# Stefano Pedemonte
 # Harvard University, Martinos Center for Biomedical Imaging 
-# April. 2015, Boston, MA
+# Aalto University, Department of Computer Science
 
 from math import pi 
 

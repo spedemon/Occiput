@@ -1,8 +1,7 @@
-
+# -*- coding: utf-8 -*-
 # occiput  
-# Stefano Pedemonte
 # Harvard University, Martinos Center for Biomedical Imaging 
-# Apr. 2014, Boston, MA
+# Aalto University, Department of Computer Science
 
 import numpy
 from occiput.Core import Image3D, Grid3D, Transform_6DOF
