@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-# occiput - Computational engine for volumetric imaging 
-# Stefano Pedemonte
-# Aalto University 
+# occiput - Tomographic Vision
 # Harvard University, Martinos Center for Biomedical Imaging 
+# Aalto University, Department of Computer Science
 
 
 # Use old Python build system, otherwise the extension libraries cannot be found. FIXME 
@@ -17,9 +16,9 @@ from glob import glob
 
 setup(
     name='occiput',
-    version='1.2.0',
+    version='1.2.1',
     author='Stefano Pedemonte',
-    author_email='stefano.pedemonte@gmail.com',
+    author_email='occiput.reconstruction@gmail.com',
     packages=['occiput', 
               'occiput.test', 
               'occiput.notebooks',
@@ -39,13 +38,16 @@ setup(
               'occiput.DataSources.FileSources', 
               'occiput.Visualization',
               ],
-    package_data={'occiput': ['Data/*.pdf','Data/*.png','Data/*.jpg','Data/*.svg','Data/*.nii','Data/*.dcm','Data/*.h5','Data/*.txt','Data/*.dat']},
+    package_data={'occiput': ['Data/*.pdf','Data/*.png','Data/*.jpg','Data/*.svg', \
+        'Data/*.nii','Data/*.dcm','Data/*.h5','Data/*.txt','Data/*.dat']},
     scripts=[],
     url='http://www.occiput.io/',
     license='LICENSE.txt',
     description='Tomographic Vision - PET, SPECT, CT, MRI reconstruction and processing.',
     long_description=open('README.rst').read(),
-    keywords = ["PET", "SPECT", "emission tomography", "transmission tomography", "tomographic reconstruction","nuclear magnetic resonance"],
+    keywords = ["PET", "SPECT", "MRI", "computer vision", "artificial intelligence", \
+        "emission tomography", "transmission tomography", "tomographic reconstruction", 
+        "nuclear magnetic resonance"],
     classifiers = [
         "Programming Language :: Python",
         "Development Status :: 4 - Beta",
@@ -75,5 +77,3 @@ setup(
         "pillow >= 2.8.0",
         "svgwrite >= 1.1.0" ] 
 ) 
-
-
