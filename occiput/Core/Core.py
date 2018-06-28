@@ -3,6 +3,8 @@
 # Harvard University, Martinos Center for Biomedical Imaging 
 # Aalto University, Department of Computer Science
 
+"""Occiput Core. Here are defined the core occiput data structures: Image3D, ImageND, 
+Grid3D, GridND and spatial transformations."""
 
 import numpy
 from PIL import Image
@@ -16,14 +18,27 @@ from occiput.Visualization import ipy_table, has_ipy_table
 from occiput.Core import transformations as tr 
 from occiput import global_settings 
 from occiput.global_settings import printoptions
-from occiput.Core.NiftyPy_wrap import transform_grid, grid_from_box_and_affine, resample_image_on_grid, INTERPOLATION_LINEAR, INTERPOLATION_POINT
-from occiput.Core.Conversion import nipy_to_occiput, nifti_to_occiput, occiput_to_nifti, occiput_from_array
-
-
+from occiput.Core.NiftyPy_wrap import transform_grid, grid_from_box_and_affine
+from occiput.Core.NiftyPy_wrap import resample_image_on_grid
+from occiput.Core.NiftyPy_wrap import INTERPOLATION_LINEAR, INTERPOLATION_POINT
+from occiput.Core.Conversion import nipy_to_occiput, nifti_to_occiput, occiput_to_nifti
+from occiput.Core.Conversion import occiput_from_array
 
 
 
 class Transform_Affine(object): 
+    """Affine transformation. Transformations map from a space to another, e.g. from 
+    the space of voxel indices (with unit measure of voxels) to scanner coordinates 
+    (e.g. with unit measures of mm). Occiput gives names to spaces in order to verify 
+    consistency when applying a spatial transformation: e.g. a transformation that maps 
+    from voxel indexes to scanner coordinates cannot be used to transform a set of points 
+    from scanner coordinates to MNI space. 
+    'map_from' and 'map_to' store the names of the spaces.  
+    
+    Attributes: 
+        data (ndarray): 4x4 affine transformation matrix. 
+        map_from (str): name of origin coordinate system. 
+        map_to (str): name of destination coordinate system. """
     def __init__(self,data=None,map_from="", map_to=""): 
         self.set_map_from(map_from)
         self.set_map_to(map_to)
@@ -45,7 +60,9 @@ class Transform_Affine(object):
                 X = obj.map_from
             else: 
                 X = "X"
-            print "Affine is incompatible with the given object: composing [%s,%s] with [%s,%s] is not allowed. "%( self.map_to,self.map_from,self.__space_of_obj(obj),X )
+            print "Affine is incompatible with the given object: composing [%s,%s] \
+                with [%s,%s] is not allowed. "\
+                %( self.map_to,self.map_from,self.__space_of_obj(obj),X )
         data = numpy.dot(self.data,obj.data)
         # return an affine transformation is the input was an affine transformation 
         if isinstance(obj,Transform_Affine): 
@@ -62,9 +79,19 @@ class Transform_Affine(object):
             return ""
 
     def export_dictionary(self): 
+        """Export transformation as Python dictionary. 
+        
+        Returns: 
+            dict: {'map_to':str, 'map_from':str, 'data':list}
+        """
         return {'map_to':self.map_to, 'map_from':self.map_from, 'data':self.data.tolist()}
 
     def export_json(self): 
+        """Export transformation as JSON string. 
+        
+        Returns: 
+            dict: "{'map_to':str, 'map_from':str, 'data':list}"
+        """
         return json.dumps(self.export_dictionary())
 
     def save_to_file(self,filename): 
@@ -165,10 +192,11 @@ class Transform_Affine(object):
 
     def derivative_parameters(self, gradient_transformed_image ): 
         pass 
-        # FIXME: implement (implemented in case of 6DOF in the derived class Transform_6DOF)
+        #FIXME implement (implemented in case of 6DOF in the derived class Transform_6DOF)
         
     def __get_inverse(self):
-        inverse = Transform_Affine(data = self.__inverse, map_to = self.map_from, map_from = self.map_to)
+        inverse = Transform_Affine(data = self.__inverse, map_to = self.map_from, \
+            map_from = self.map_to)
         return inverse
 
     def __compute_inverse(self):
@@ -204,7 +232,8 @@ class Transform_Affine(object):
 
     def __repr__(self): 
         with printoptions(precision=4, suppress=True):
-            s = "Transformation "+"\n-from: "+str(self.map_from)+"\n-to:   "+str(self.map_to)+"\n-matrix: \n"+self.__data.__repr__()
+            s = "Transformation "+"\n-from: "+str(self.map_from)+"\n-to:   "+\
+                str(self.map_to)+"\n-matrix: \n"+self.__data.__repr__()
         return s
 
     def _repr_html_(self):

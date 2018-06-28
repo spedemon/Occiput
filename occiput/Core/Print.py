@@ -3,8 +3,9 @@
 # Harvard University, Martinos Center for Biomedical Imaging 
 # Aalto University, Department of Computer Science
 
-from math import pi 
+"""Occiput: pretty print functions."""
 
+from math import pi 
 
 def millisec_to_min_sec(ms):
     """Convert millisecond [integer] to string: min sec msec."""
@@ -12,10 +13,12 @@ def millisec_to_min_sec(ms):
     sec = totsec%60
     min = int(ms)/1000/60 
     msec = ms%(1000)
-    return str(min).zfill(2)+" [min]  "+ str(sec).zfill(2)+" [sec]  " + str(msec).zfill(3)+" [msec]"
+    return str(min).zfill(2)+" [min]  "+ str(sec).zfill(2)+" [sec]  " + \
+        str(msec).zfill(3)+" [msec]"
 
 def pretty_print_large_number(number):
-    """Given a large number, it returns a string of the sort:  '10.5 Thousand' or '12.3 Billion'. """
+    """Given a large number, it returns a string of the sort:  '10.5 Thousand' or 
+    '12.3 Billion'. """
     s = str(number).ljust(12)
     if number > 0 and number < 1e3: 
         pass 
@@ -30,7 +33,8 @@ def pretty_print_large_number(number):
     return s
 
 def print_percentage(number): 
-    """Given a number between 0 and 1, it returns a string indicating percentage: e.g. 10.2 %%"""
+    """Given a number between 0 and 1, it returns a string indicating percentage: 
+    e.g. 10.2 %%"""
     return "%2.2f %%"%((1.0*number)*100) 
 
 def rad_to_deg(rad): 
