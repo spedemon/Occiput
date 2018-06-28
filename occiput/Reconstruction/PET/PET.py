@@ -5,9 +5,11 @@
 
 
 # If you are looking for PET reconstruction, this is where to start. 
-# The objects defined here provide a abstractions for Static and Dynamic PET reconstruction, 
+# The objects defined here provide abstractions for Static and Dynamic PET reconstruction, 
 # abstracting the scanner geometries and vendor models and providing an interface to the 
 # software tools for projection, backprojection and reconstruction. 
+# Occiput enables reconstruction both from list-mode and from sinogram data using GPU 
+# acceleration. 
 
 
 __all__ = ['PET_Static_Scan', 'PET_Multi2D_Scan', 'PET_Dynamic_Scan', 'PET_Cyclic_Scan', 'Binning', 'PET_Projection_Sparsity', 'PET_Projection', 'RigidTransform'] 
