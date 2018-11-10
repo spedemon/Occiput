@@ -3,7 +3,7 @@
 # Harvard University, Martinos Center for Biomedical Imaging 
 # Aalto University, Department of Computer Science
 
-# FIXME: consider getting rid of this file and placing code in occiput.Transformation
+# TODO: consider getting rid of this file and placing code in occiput.Transformation
 
 """Occiput: wrapper of NiftiRec GPU-accelerated ray-tracing and image transofrmatoin 
 library."""
@@ -17,7 +17,7 @@ try:
     from NiftyPy.NiftyRec import TR_grid_from_box_and_affine as __TR_grid_from_box_and_aff 
     from NiftyPy.NiftyRec import TR_transform_grid as           __TR_transform_grid 
     from NiftyPy.NiftyRec import PET_project_compressed, PET_backproject_compressed 
-    from NiftyPy.NiftyRec import PET_compress_projection, PET_uncompress_projection, 
+    from NiftyPy.NiftyRec import PET_compress_projection, PET_uncompress_projection 
     from NiftyPy.NiftyRec import PET_initialize_compression_structure
     from NiftyPy.NiftyRec import SPECT_project_parallelholes
     from NiftyPy.NiftyRec import SPECT_backproject_parallelholes 

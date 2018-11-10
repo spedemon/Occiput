@@ -60,9 +60,9 @@ class Transform_Affine(object):
                 X = obj.map_from
             else: 
                 X = "X"
-            print "Affine is incompatible with the given object: composing [%s,%s] \
+            print("Affine is incompatible with the given object: composing [%s,%s] \
                 with [%s,%s] is not allowed. "\
-                %( self.map_to,self.map_from,self.__space_of_obj(obj),X )
+                %( self.map_to,self.map_from,self.__space_of_obj(obj),X ))
         data = numpy.dot(self.data,obj.data)
         # return an affine transformation is the input was an affine transformation 
         if isinstance(obj,Transform_Affine): 
@@ -156,7 +156,7 @@ class Transform_Affine(object):
         try: 
             rot,axis,point = tr.rotation_from_matrix(mat)
         except ValueError: 
-            #print "Not a rotation matrix. "
+            #print("Not a rotation matrix. ")
             return None, None, None
         return tra, rot, axis
 
@@ -176,9 +176,9 @@ class Transform_Affine(object):
         try: 
             rot,rot_axis,point = tr.rotation_from_matrix(mat) 
         except ValueError: 
-            #print "Not a rotation matrix. "
+            #print("Not a rotation matrix. ")
             return None, None, None, None
-        #print "Rotation axis: ",rot_axis
+        #print("Rotation axis: ",rot_axis)
         return tra, scale, rot, rot_axis
  
     def to_quaternion_translation(self): 
@@ -557,7 +557,7 @@ class ImageND(object):
         elif affine is None: 
             self.affine = Transform_Identity()  
         else: 
-            print "'affine' must be an instance of Affine"
+            print("'affine' must be an instance of Affine")
         self.affine.map_to = self.space        
         
     def set_space(self,space): 
@@ -593,14 +593,14 @@ class ImageND(object):
         return M
 
     def get_pixel_grid(self): 
-        print "get_pixel_grid"
+        print("get_pixel_grid")
         n_points = numpy.uint32(self.shape)
         grid = grid_from_box_and_affine(numpy.asarray([0,0,0]), n_points-1, n_points) 
         return grid
 
     def transform(self,affine): 
         if not isinstance(affine,Transform_Affine): 
-            print "Transformation must be an instance of Affine."
+            print("Transformation must be an instance of Affine.")
             # FIXME raise error
             return None
         self.affine = affine.left_multiply(self.affine)
@@ -642,7 +642,7 @@ class Image3D(ImageND):
     def compute_gradient_on_grid(self, grid, affine_grid_to_world=None, verify_mapping=True): 
         resampled_data = resample_image_on_grid(self, grid, affine_grid_to_world, verify_mapping, self.background, self.use_gpu)
         # create new Image3D object
-        #print resampled_data.max()
+        #print(resampled_data.max() )
         gradient_data = numpy.gradient(resampled_data) #FIXME: use NiftyPy
         return gradient_data
         
@@ -751,10 +751,10 @@ class Image3D(ImageND):
                     return out
                 else: 
                     #FIXME: implement 
-                    print "SUM of images on different grids; the right hand side image must be resampled, please implement this."
+                    print("SUM of images on different grids; the right hand side image must be resampled, please implement this.")
             else: 
                 # FIXME: raise error 
-                print "SUM of images not in the same space. It cannot be done. "
+                print("SUM of images not in the same space. It cannot be done. ")
         else: 
             out=self.copy()
             out.data = out.data+other
@@ -770,10 +770,10 @@ class Image3D(ImageND):
                     return out
                 else: 
                     #FIXME: implement 
-                    print "SUB of images on different grids; the right hand side image must be resampled, please implement this."
+                    print("SUB of images on different grids; the right hand side image must be resampled, please implement this.")
             else: 
                 # FIXME: raise error 
-                print "SUB of images not in the same space. It cannot be done. "
+                print("SUB of images not in the same space. It cannot be done. ")
         else: 
             out=self.copy()
             out.data = out.data-other
@@ -789,10 +789,10 @@ class Image3D(ImageND):
                     return out
                 else: 
                     #FIXME: implement 
-                    print "MUL of images on different grids; the right hand side image must be resampled, please implement this."
+                    print("MUL of images on different grids; the right hand side image must be resampled, please implement this.")
             else: 
                 # FIXME: raise error 
-                print "MUL of images not in the same space. It cannot be done. "
+                print("MUL of images not in the same space. It cannot be done. ")
         else: 
             out=self.copy()
             out.data = out.data*other
@@ -808,10 +808,10 @@ class Image3D(ImageND):
                     return out
                 else: 
                     #FIXME: implement 
-                    print "DIV of images on different grids; the right hand side image must be resampled, please implement this."
+                    print("DIV of images on different grids; the right hand side image must be resampled, please implement this.")
             else: 
                 # FIXME: raise error 
-                print "DIV of images not in the same space. It cannot be done. "
+                print("DIV of images not in the same space. It cannot be done. ")
         else: 
             out=self.copy()
             out.data = out.data/other
@@ -833,10 +833,10 @@ class Image3D(ImageND):
                     return out
                 else: 
                     #FIXME: implement 
-                    print "SUB of images on different grids; the right hand side image must be resampled, please implement this."
+                    print("SUB of images on different grids; the right hand side image must be resampled, please implement this.")
             else: 
                 # FIXME: raise error 
-                print "SUB of images not in the same space. It cannot be done. "
+                print("SUB of images not in the same space. It cannot be done. ")
         else: 
             out=self.copy()
             out.data = other-out.data
@@ -852,10 +852,10 @@ class Image3D(ImageND):
                     return out
                 else: 
                     #FIXME: implement 
-                    print "DIV of images on different grids; the right hand side image must be resampled, please implement this."
+                    print("DIV of images on different grids; the right hand side image must be resampled, please implement this.")
             else: 
                 # FIXME: raise error 
-                print "DIV of images not in the same space. It cannot be done. "
+                print("DIV of images not in the same space. It cannot be done. ")
         else: 
             out = self.copy()
             out.data = other / out.data
