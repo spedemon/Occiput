@@ -34,7 +34,7 @@ class Downloader_HTTP():
             if output!=None: 
                 if os.path.exists(output): 
                     if self._verbose: 
-                        print "File",output,"exists, not dowloading." 
+                        print(("File",output,"exists, not dowloading.")) 
                     self._set_percentage(100) 
                     return output 
         self._set_percentage(0) 
@@ -59,7 +59,7 @@ class Downloader_HTTP():
                 if p!=None: 
                     self._set_percentage(p) 
                 if self._verbose:  
-                    print s
+                    print(s)
                 name = self._strip_filename(s) 
                 if name!=None: 
                     self._set_filename(name)
@@ -90,7 +90,7 @@ class Downloader_HTTP():
         if s.find("Saving to")!=-1: 
             name = s.strip("Saving to").strip("\n").strip("“").strip("'").strip("`")
             if self._verbose: 
-                print "Detected name: ",name
+                print(("Detected name: ",name))
             return name 
 
     def _set_filename(self,name): 

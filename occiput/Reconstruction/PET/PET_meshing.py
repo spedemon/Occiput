@@ -24,17 +24,17 @@ class Michelogram:
         n_rings = abs(int(n_rings))
         if (span/2)*2 == span: 
             span = span+1
-            print "Span must be odd, using span %d"%span
+            print(("Span must be odd, using span %d"%span))
         if not self._verify_max_ring_difference(span, n_rings, max_ring_difference): 
             max_ring_difference_actual = self._largest_compatible_max_ring_difference(span, n_rings, max_ring_difference)
             compatible_max_ring_diff = self._compatible_max_ring_differences(span, n_rings)
             if compatible_max_ring_diff is []: 
-                print "Michelogram: No 'maximum_ring_difference' exists compatible with given 'span' and 'n_rings'. "
+                print("Michelogram: No 'maximum_ring_difference' exists compatible with given 'span' and 'n_rings'. ")
             elif max_ring_difference_actual is None: 
-                print "Michelogram: 'maximum_ring_difference' %d too small, using %d. "%(max_ring_difference,compatible_max_ring_diff[0])
+                print(("Michelogram: 'maximum_ring_difference' %d too small, using %d. "%(max_ring_difference,compatible_max_ring_diff[0])))
                 max_ring_difference = compatible_max_ring_diff[0]
             else: 
-                print "Michelogram: 'maximum_ring_difference' %d is not compatible with 'span' %d. Compatible values are "%(max_ring_difference,span)+str(compatible_max_ring_diff)+". \nUsing %d"%max_ring_difference_actual
+                print(("Michelogram: 'maximum_ring_difference' %d is not compatible with 'span' %d. Compatible values are "%(max_ring_difference,span)+str(compatible_max_ring_diff)+". \nUsing %d"%max_ring_difference_actual))
                 max_ring_difference = max_ring_difference_actual
         self.n_rings = n_rings
         self.span = span 

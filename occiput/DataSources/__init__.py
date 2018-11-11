@@ -4,7 +4,7 @@
 # Aalto University, Department of Computer Science
 
 
-import Synthetic
-import FileSources 
+from . import Synthetic
+from . import FileSources 
 
 

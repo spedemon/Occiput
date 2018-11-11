@@ -34,15 +34,15 @@ def get_verbose_level():
 def print_debug(msg):
     """Use this for DEBUG Information"""
     if __verbose >= 2: 
-        print msg
+        print(msg)
 def print_runtime(msg):
     """Use this for messages useful at runtime"""
     if __verbose >= 1: 
-        print msg
+        print(msg)
 def print_important(msg):
     """Use this for important messages"""
     if __verbose >= 0: 
-        print msg
+        print(msg)
 
 
 # Other print options 

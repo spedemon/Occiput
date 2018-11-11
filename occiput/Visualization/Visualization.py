@@ -9,9 +9,9 @@ import uuid
 
 from occiput.global_settings import is_gpu_enabled
 from DisplayNode import DisplayNode
-import Colors as C
+from . import Colors as C
 from IPython.display import HTML, display, Javascript
-from ipynb import is_in_ipynb
+from .ipynb import is_in_ipynb
 
 
 
@@ -59,7 +59,7 @@ class ProgressBar():
         if self.mode == "ipynb": 
             display(Javascript("$('div#%s').width('%i%%')" % (self._divid, percentage)))
         else: 
-            print "%2.1f / 100"%percentage
+            print(("%2.1f / 100"%percentage))
 
     def get_percentage(self):
         return self._percentage
@@ -313,7 +313,7 @@ try:
     from NiftyPy.NiftyRec import SPECT_project_parallelholes as projection
 except: 
     has_NiftyPy = False
-    print "Please install NiftyPy"
+    print("Please install NiftyPy")
 else: 
     has_NiftyPy = True
 
@@ -367,7 +367,7 @@ class SPECT_Projection():
         N_projections = self.data.shape[2]
         N_x = self.data.shape[0]
         N_y = self.data.shape[1]
-        print "SPECT Projection   [N_projections: %d   N_x: %d   N_y: %d]"%(N_projections,N_x,N_y)
+        print(("SPECT Projection   [N_projections: %d   N_x: %d   N_y: %d]"%(N_projections,N_x,N_y)))
         for i in range( N_projections ): 
                 images.append( self.to_image(data,i,scale=scale,absolute_scale=True) ) 
                 progress_bar.set_percentage(i*100.0/N_projections)                         
@@ -613,7 +613,7 @@ try:
     import ipy_table 
     has_ipy_table = True
 except: 
-    print "Please install ipy_table (e.g. 'easy_install ipy_table') to enable ipython notebook tables. "
+    print("Please install ipy_table (e.g. 'easy_install ipy_table') to enable ipython notebook tables. ")
     ipy_table = None 
     has_ipy_table = False
 
@@ -627,7 +627,7 @@ try:
     import svgwrite
     has_svgwrite = True
 except: 
-    print "Please install svgwrite (e.g. 'easy_install svgwrite') to enable svg visualisations. "
+    print("Please install svgwrite (e.g. 'easy_install svgwrite') to enable svg visualisations. ")
     svgwrite = None
     has_svgwrite = False
 

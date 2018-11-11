@@ -9,7 +9,7 @@ def import_listmode(filename):
 
 
 def convert_listmode_dicom_to_interfile(dicom_file, interfile_file_name_base): 
-    print "Converting listmode dicom file to listmode interfile. "
+    print("Converting listmode dicom file to listmode interfile. ")
 
     import dicom 
     d = dicom.read_file(dicom_file)
@@ -24,4 +24,4 @@ def convert_listmode_dicom_to_interfile(dicom_file, interfile_file_name_base):
     f = open(interfile_file_name_base+".l","wb")
     f.write(data.value)
     f.close() 
-    print "Done. "
+    print("Done. ")

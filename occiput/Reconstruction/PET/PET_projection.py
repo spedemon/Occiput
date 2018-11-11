@@ -216,17 +216,17 @@ class PET_Projection_Sparsity():
         """Overload the AND operator. """
         if not isinstance(other,self.__class__): 
             raise Exception("Binary operation must be with another object of the same type - PET_Projection_Sparsity. ")
-        print "This is not implemented, it should be implemented at low level. "
+        print("This is not implemented, it should be implemented at low level. ")
 
     def __xor__(self, other): 
         if not isinstance(other,self.__class__): 
             raise Exception("Binary operation must be with another object of the same type - PET_Projection_Sparsity. ")
-        print "This is not implemented, it should be implemented at low level. "
+        print("This is not implemented, it should be implemented at low level. ")
     
     def __or__(self, other): 
         if not isinstance(other,self.__class__): 
             raise Exception("Binary operation must be with another object of the same type - PET_Projection_Sparsity. ")
-        print "This is not implemented, it should be implemented at low level. "
+        print("This is not implemented, it should be implemented at low level. ")
 
     def get_locations_per_plane(self):
         """Returns the number of active locations per projection plane."""
@@ -331,7 +331,7 @@ class PET_Projection():
         # FIXME: verify that the two PET_Projection objects have the same binning 
         if isinstance(projection, PET_Projection): 
             if not projection.is_uncompressed(): 
-                print "Re-compressing projection data, possible data loss. "
+                print("Re-compressing projection data, possible data loss. ")
                 uncompressed_projection = projection.uncompress_self() 
                 uncompressed_data = uncompressed_projection.data
             else: 
@@ -357,8 +357,8 @@ class PET_Projection():
         if self.is_compressed(): 
             return self
         else: 
-            print "Find the zeros and compress. "
-            print "Not implemented. Please implement me. This needs low level implementation. Right now sparsity comes only from listmode data. "
+            print("Find the zeros and compress. ")
+            print("Not implemented. Please implement me. This needs low level implementation. Right now sparsity comes only from listmode data. ")
             #offsets, locations, data = PET_compress_projection_array(self.data, self.N_axial, self.N_azimuthal, self.N_u, self.N_v)
     #return PET_Projection( self.get_binning(), data, offsets, locations, self.get_time_bins() )
 
@@ -389,7 +389,7 @@ class PET_Projection():
     def same_sparsity_as(self, obj): 
         """Returns True if the argument is an object of type PET_Projection_Sparsity with the same identical sparsity pattern as self. """
         if not hasattr(obj,'sparsity'): 
-            print "PET.py - same_sparsity(): Object of wrong type"  # FIXME:raise input error
+            print("PET.py - same_sparsity(): Object of wrong type")  # FIXME:raise input error
         return self.sparsity.same_sparsity_as(obj.sparsity) 
 
     def is_compressed(self): 
@@ -521,7 +521,7 @@ class PET_Projection():
     def crop(self, bins_range):
         """Crop projection"""
         if self.is_compressed(): 
-            print "Cropping of PET_Projection currently only works with uncompressed data. Please implement for compressed data. "
+            print("Cropping of PET_Projection currently only works with uncompressed data. Please implement for compressed data. ")
             return 
         A = bins_range[0]
         B = bins_range[1]

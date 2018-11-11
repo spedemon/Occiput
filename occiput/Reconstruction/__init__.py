@@ -3,8 +3,8 @@
 # Harvard University, Martinos Center for Biomedical Imaging 
 # Aalto University, Department of Computer Science
 
-import PET
-import SPECT
-import MR
+from . import PET
+from . import SPECT
+from . import MR
 #import CT
 

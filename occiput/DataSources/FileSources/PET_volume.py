@@ -19,7 +19,7 @@ __all__ = ["import_interfile_volume","export_interfile_volume"]
 
 def import_interfile_volume_data(headerfile='', datafile=''):  #FIXME: this should be in the Interfile package
         F = Interfile.load(headerfile)
-        if F.has_key('matrix size[1]'): 
+        if 'matrix size[1]' in F: 
             Nx    = F['matrix size[1]']['value']
             Ny    = F['matrix size[2]']['value']
             Nz    = F['matrix size[3]']['value']        
@@ -41,7 +41,7 @@ def import_interfile_volume_data(headerfile='', datafile=''):  #FIXME: this shou
                     try: 
                         data = fromfile(datafile3,dtype=float32)
                     except: 
-                        print "Data file not found."
+                        print("Data file not found.")
         else: 
             data = fromfile(datafile,dtype=float32)
         data = data.reshape([Nz,Ny,Nx])
@@ -55,7 +55,7 @@ def import_interfile_volume(headerfile='', datafile=''):
         data = import_interfile_volume_data(headerfile, datafile) 
         # Load other information - e.g. pixels size 
         F = Interfile.load(headerfile)
-        if F.has_key('scale factor (mm/pixel) [1]'): 
+        if 'scale factor (mm/pixel) [1]' in F: 
             pixsize_x = F['scale factor (mm/pixel) [1]']['value']
             pixsize_y = F['scale factor (mm/pixel) [2]']['value']
             pixsize_z = F['scale factor (mm/pixel) [3]']['value']

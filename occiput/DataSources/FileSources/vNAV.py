@@ -119,7 +119,7 @@ class vNAV_MPRage():
                 try: 
                     f = dicom.read_file(full_path) 
                 except: 
-                    print "Could not read file ",full_path
+                    print(("Could not read file ",full_path))
                     return 
                 t = f.get(0x00191025).value 
                 r = f.get(0x00191026).value 
@@ -192,7 +192,7 @@ class vNAV_MPRage():
                     self._draw_line(axis, t_index, range_y, color, linestyle, label)
 
     def plot_motion(self, save_to_file=None, display_dicom_comments=True, display_dicom_moco=False, range_mm=(-8,8), range_deg=(-7,7), extract_events_threshold=THRESHOLD_MM, method='box', box_min=BOX_MIN, box_max=BOX_MAX, min_duration=1, line_color=LINE_COLOR, figsize=[10,5]):
-        t = range(len(self._tx))
+        t = list(range(len(self._tx)))
 
         # make windows:
         if extract_events_threshold is not None: 
@@ -403,7 +403,7 @@ class vNAV_MPRage():
             dist = (corners-corners_t).sum(0)
             mean_displ = numpy.mean(dist)
         else: 
-            raise "Method to compute mean displacement is unknown. "
+            raise ValueError("Method to compute mean displacement is unknown. ")
         return mean_displ
  
     def get_mean_displacement_variation(self, index, method='box', box_min=BOX_MIN, box_max=BOX_MAX):
@@ -426,7 +426,7 @@ class vNAV_MPRage():
             #dist = (corners-corners_t).sum(0)
             mean_displ = numpy.mean(dist)
         else: 
-            raise "Method to compute mean displacement is unknown. "
+            raise ValueError("Method to compute mean displacement is unknown. ")
         return mean_displ
 
     def get_mean_displacement_variation_since_time(self, index_new, index_old, method='box', box_min=BOX_MIN, box_max=BOX_MAX):
@@ -446,12 +446,12 @@ class vNAV_MPRage():
             #dist = (corners-corners_t).sum(0)
             mean_displ = numpy.mean(dist)
         else: 
-            raise "Method to compute mean displacement is unknown. "
+            raise ValueError("Method to compute mean displacement is unknown. ")
         return mean_displ
 
         
     def extract_motion_events(self, method='box', threshold=THRESHOLD_MM, box_min=BOX_MIN, box_max=BOX_MAX):
-        t = range(self.get_n_time_points())
+        t = list(range(self.get_n_time_points()))
         is_event   = numpy.zeros(len(t)-1)
         t_index_old = 0
         for t_index in t[1:]: 
@@ -468,7 +468,7 @@ class vNAV_MPRage():
 
 
     def plot_mean_displacement(self, method='box', box_min=BOX_MIN,box_max=BOX_MAX, save_to_file=None, plot_zero=False, extract_events_threshold=THRESHOLD_MM, plot_range=[None,None], line_color=LINE_COLOR, min_duration=1, figsize=[10,5] ): 
-        t = range(self.get_n_time_points())
+        t = list(range(self.get_n_time_points()))
         mean_displ = numpy.zeros(len(t))
         mean_displ_var = numpy.zeros(len(t))
         mean_displ_var_since_event = numpy.zeros(len(t))
@@ -592,7 +592,7 @@ class vNAV_MPRage():
         return fig
 
     def plot_quaternion(self, save_to_file=None, plot_range=[None,None], line_color=LINE_COLOR, figsize=[10,5]): 
-        t = range(self.get_n_time_points())[1:]
+        t = list(range(self.get_n_time_points()))[1:]
         s = rad_to_deg(numpy.asarray(self._a0_comm))[1:]
         
         fig = plt.figure(6,figsize=figsize)
@@ -616,7 +616,7 @@ class vNAV_MPRage():
             arc[t] = numpy.dot( numpy.transpose(v0), vt )
         ax1 = fig.add_subplot(212)
         ax1.set_title("Arc vs. vNAV frame number")
-        t = range(self.get_n_time_points())
+        t = list(range(self.get_n_time_points()))
         ax1.plot(t,arc, line_color)
         ax1.grid(True)
         plot_range[0]=arc.min()-0.0001

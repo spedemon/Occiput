@@ -23,7 +23,7 @@ try:
     from NiftyPy.NiftyRec import SPECT_backproject_parallelholes 
     from NiftyPy.NiftyRec import gpu_set, gpu_reset, gpu_list, gpu_exists
 except: 
-    print "NiftyPy could not be loaded: it will not be possible to reconstruct PET data. "
+    print("NiftyPy could not be loaded: it will not be possible to reconstruct PET data. ")
     has_NiftyPy = False
     PET_project_compressed = None
     PET_backproject_compressed = None
@@ -53,7 +53,7 @@ def transform_grid(grid, affine_from_grid):
     """Transform n-dimensional point cloud on GPU."""
     # 1) verify if the spaces of the affine map and of the grid are compatible: 
     if not affine_from_grid.can_left_multiply(grid): 
-        print "Affine transformation not compatible with grid. " 
+        print("Affine transformation not compatible with grid. ") 
         # FIXME: raise error, or warning, depending on a global setting 
     # 2) transform 
     transformed = __TR_transform_grid( grid.data, affine_from_grid.data ) 
@@ -80,7 +80,7 @@ def resample_image_on_grid(image, grid, affine_grid_to_world=None, verify_mappin
         # 1)If affine_grid_to_world is not defined, verify if image and grid compatibility
         if affine_grid_to_world == None: 
             if not image.affine.can_inverse_left_multiply(grid): 
-                print "grid and image are not compatible. "
+                print("grid and image are not compatible. ")
                 #FIXME: raise exception
                 return       
         # 2)If affine_grid_to_world is defined, verify if image, grid 
@@ -88,12 +88,12 @@ def resample_image_on_grid(image, grid, affine_grid_to_world=None, verify_mappin
         else: 
             # a) check mapping from grid to world 
             if not affine_grid_to_world.can_left_multiply(grid): 
-                print "grid and affine_grid_to_world are not compatible. "
+                print("grid and affine_grid_to_world are not compatible. ")
                 #FIXME: raise exception
                 return    
             # b) check mapping from image to world 
             if not image.affine.can_inverse_left_multiply(affine_grid_to_world):
-                print "image and affine_grid_to_world are not compatible. "
+                print("image and affine_grid_to_world are not compatible. ")
                 #FIXME: raise exception
                 return
     # compute affine: 

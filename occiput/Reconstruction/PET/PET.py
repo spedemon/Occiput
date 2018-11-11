@@ -52,7 +52,7 @@ from occiput.Visualization import ipy_table, has_ipy_table, svgwrite, has_svgwri
 
 
 # Import ilang (inference language; optimisation) 
-from PET_ilang import PET_Static_Poisson, PET_Dynamic_Poisson, ProbabilisticGraphicalModel
+from .PET_ilang import PET_Static_Poisson, PET_Dynamic_Poisson, ProbabilisticGraphicalModel
 from ilang.Samplers import Sampler 
 
 
@@ -279,26 +279,26 @@ class PET_Static_Scan():
         
     def set_activity_shape(self, activity_shape): 
         if not len(activity_shape) == 3: 
-            print "Invalid activity shape"  #FIXME: raise invalid input error
+            print("Invalid activity shape")  #FIXME: raise invalid input error
         else: 
             self.activity_shape = activity_shape 
 
     def set_activity_size(self, activity_size): 
         if not len(activity_size) == 3: 
-            print "Invalid activity size"  #FIXME: raise invalid input error
+            print("Invalid activity size")  #FIXME: raise invalid input error
         else: 
             self.activity_size = activity_size 
         self._adapt_line_step_size_activity() 
 
     def set_attenuation_shape(self, attenuation_shape): 
         if not len(attenuation_shape) == 3: 
-            print "Invalid attenuation shape"  #FIXME: raise invalid input error
+            print("Invalid attenuation shape")  #FIXME: raise invalid input error
         else: 
             self.attenuation_shape = attenuation_shape 
 
     def set_attenuation_size(self, attenuation_size): 
         if not len(attenuation_size) == 3: 
-            print "Invalid attenuation size"  #FIXME: raise invalid input error
+            print("Invalid attenuation size")  #FIXME: raise invalid input error
         else: 
             self.attenuation_size = attenuation_size 
         self._adapt_line_step_size_attenuation() 
@@ -450,8 +450,8 @@ class PET_Static_Scan():
                                           self.prompts.sparsity.locations, self.prompts.get_time_bins()) 
                 self.prompts = prompts 
         else: 
-            print "Prompts data should be an instance of PET_Projection or an array whose dimension"
-            print "matches the sparsity pattern of the current projection data. " 
+            print("Prompts data should be an instance of PET_Projection or an array whose dimension")
+            print("matches the sparsity pattern of the current projection data. ") 
             # FIXME: raise input error and to a try-except when creating the instance of PET_Projection 
 
     def get_randoms(self): 
@@ -467,8 +467,8 @@ class PET_Static_Scan():
                 randoms = PET_Projection( self.randoms.get_binning(), randoms, self.randoms.sparsity.offsets, self.randoms.sparsity.locations, self.randoms.get_time_bins()) 
                 self.randoms = randoms 
         else: 
-            print "Delay randoms data should be an instance of PET_Projection or an array whose dimension"
-            print "matches the sparsity pattern of the current projection data. " 
+            print("Delay randoms data should be an instance of PET_Projection or an array whose dimension")
+            print("matches the sparsity pattern of the current projection data. ") 
             # FIXME: raise input error and to a try-except when creating the instance of PET_Projection 
 
     def get_sensitivity(self): 
@@ -481,7 +481,7 @@ class PET_Static_Scan():
 
     def export_sensitivity(self, filename): 
         if self.sensitivity is None: 
-            print "Sensitivity has not been loaded"
+            print("Sensitivity has not been loaded")
         else: 
             self.get_sensitivity().save_to_file(filename)
 
@@ -510,10 +510,10 @@ class PET_Static_Scan():
 #            else: 
 #                print "Warning: If loading real scanner data, please load prompts before loading the sensitivity. Ignore this message if this is a simulation. See the source code for more info. " # FIXME: see comment two lines up 
         elif filetype is "mat": 
-            print "Sensitivity from Matlab not yet implemented. All is ready, please spend 15 minutes and implement. "
+            print("Sensitivity from Matlab not yet implemented. All is ready, please spend 15 minutes and implement. ")
             return 
         else: 
-            print "File type unknown. "
+            print("File type unknown. ")
             return 
         sensitivity.data = float32(sensitivity.data)
         if self._use_compression is False: 
@@ -527,7 +527,7 @@ class PET_Static_Scan():
         elif filetype is "h5": 
              projection = import_PET_Projection(filename)
         else: 
-            print "PET.import_scatter: file type unknown. "
+            print("PET.import_scatter: file type unknown. ")
             return 
         projection.data = float32(projection.data)
         if self._use_compression is False: 
@@ -541,7 +541,7 @@ class PET_Static_Scan():
         elif filetype is "h5": 
              projection = import_PET_Projection(filename)
         else: 
-            print "PET.import_randoms: file type unknown. "
+            print("PET.import_randoms: file type unknown. ")
             return
         projection.data = float32(projection.data)
         if self._use_compression is False: 
@@ -555,7 +555,7 @@ class PET_Static_Scan():
         elif filetype is "h5": 
              projection = import_PET_Projection(filename)
         else: 
-            print "PET.import_prompts: file type unknown. "
+            print("PET.import_prompts: file type unknown. ")
             return
         projection.data = float32(projection.data)
         if self._use_compression is False: 
@@ -567,22 +567,22 @@ class PET_Static_Scan():
         if filetype is "interfile_volume_header": 
             volume = import_interfile_volume(filename, datafile)
         elif filetype is "nifti": 
-            print "Nifti attenuation file not supported. Everything is ready to implement this, please implement it. "
+            print("Nifti attenuation file not supported. Everything is ready to implement this, please implement it. ")
             # FIXME: if nifti files are used, sum the hardware image using resampling in the common space
         elif filetype is "h5": 
-            print "H5 attenuation file not supported. Everything is ready to implement this, please implement it. "
+            print("H5 attenuation file not supported. Everything is ready to implement this, please implement it. ")
             # FIXME: if h5 files are used, sum the hardware image using resampling in the common space
         elif filetype is "mat": 
-            print "Matlab attenuation file not supported. Everything is ready to implement this, please implement it. "
+            print("Matlab attenuation file not supported. Everything is ready to implement this, please implement it. ")
         else: 
-            print "PET.import_attenuation: file type of %s unknown. Unable to load attenuation tomogram. "%filename
+            print(("PET.import_attenuation: file type of %s unknown. Unable to load attenuation tomogram. "%filename))
             return 
         if filename_hardware is not '': 
             filetype = guess_file_type_by_name(filename_hardware) 
             if filetype is "interfile_volume_header": 
                 volume_hardware = import_interfile_volume(filename_hardware, datafile_hardware)
             else: 
-                print "File type of %s unknown. Unable to load hardware attenuation tomogram. "%filename_hardware
+                print(("File type of %s unknown. Unable to load hardware attenuation tomogram. "%filename_hardware))
             volume.data = volume.data + volume_hardware.data  
         volume.data = float32(volume.data)
         self.set_attenuation(volume)
@@ -594,7 +594,7 @@ class PET_Static_Scan():
         elif filetype is "h5": 
              projection = import_PET_Projection(filename)
         else: 
-            print "PET.import_attenuation_projection: file type unknown. "
+            print("PET.import_attenuation_projection: file type unknown. ")
             return
         projection.data = float32(projection.data)
         if self._use_compression is False: 
@@ -728,7 +728,7 @@ class PET_Static_Scan():
             pylab.hold(1)
             pylab.plot(sensitivity*scatter,'g') 
         else: 
-            print "quick_inspect uses Pylab to display imaging data. Please install Pylab. " 
+            print("quick_inspect uses Pylab to display imaging data. Please install Pylab. ") 
 
     def _get_sparsity(self): 
         #if self.prompts == None: 
@@ -781,7 +781,7 @@ class PET_Static_Scan():
             invert = True 
             scale  = 10.0 
         else: 
-            print "Unit measure unknown. Assuming inv_cm. Keep track of the unit measures! "
+            print("Unit measure unknown. Assuming inv_cm. Keep track of the unit measures! ")
             invert = False
             scale  = 10.0
             
@@ -870,7 +870,7 @@ class PET_Static_Scan():
             invert = True 
             scale  = 10.0 
         else: 
-            print "Unit measure unknown. Assuming inv_cm. Keep track of the unit measures! "
+            print("Unit measure unknown. Assuming inv_cm. Keep track of the unit measures! ")
             invert = False
             scale  = 10.0
             
@@ -1181,7 +1181,7 @@ class PET_Static_Scan():
             attenuation = 1.0 
         
         if self.prompts is None: 
-            print "self.prompts is None, please set prompts. " 
+            print("self.prompts is None, please set prompts. ") 
             return 
             # FIXME : throw an error 
 
@@ -1215,7 +1215,7 @@ class PET_Static_Scan():
 #        gradient_term1 = self.get_normalization(att_sens, transformation_activity, sparsity, duration_ms, subsets_matrix, epsilon=epsilon)
         norm = PET_Projection(self.binning, data=1.0, subsets_matrix=subsets_matrix)
         gradient_term1 = self.backproject_activity(norm)
-        print "the two lines above (1033-1034 PET.py) are temporary"
+        print("the two lines above (1033-1034 PET.py) are temporary")
         self._time_profiling_record_norm()
         
         # Compute the second term of the gradient: backprojection of the ratio between the measurement and the projection of 
@@ -1250,7 +1250,7 @@ class PET_Static_Scan():
             attenuation = 1.0 
         
         if self.prompts is None: 
-            print "self.prompts is None, please set prompts. " 
+            print("self.prompts is None, please set prompts. ") 
             return 
             # FIXME : throw an error 
 
@@ -1329,7 +1329,7 @@ class PET_Static_Scan():
             epsilon = EPS 
 
         if self.prompts is None: 
-            print "self.prompts is None, please set prompts. " 
+            print("self.prompts is None, please set prompts. ") 
             return 
             # FIXME : throw an error 
 
@@ -1380,7 +1380,7 @@ class PET_Static_Scan():
             self.set_sensitivity(sensitivity)
         
         for i in range(iterations):
-            print i
+            print(i)
             subsets_matrix = subsets_generator.new_subset(subset_mode, subset_size)
             activity = self.osem_step(activity, subsets_matrix, attenuation_projection, transformation)
         return activity
@@ -1395,7 +1395,7 @@ class PET_Static_Scan():
             self.set_sensitivity(sensitivity)
         
         for i in range(iterations):
-            print i
+            print(i)
             subsets_matrix = None
             activity = self.osem_step(activity, subsets_matrix, attenuation_projection, transformation)
         return activity
@@ -1409,7 +1409,7 @@ class PET_Static_Scan():
         
         duration_ms = prompts.get_duration() 
         if duration_ms is None: 
-            print "Acquisition duration unknown (self.prompts.time_bins undefined); assuming 60 minutes. "
+            print("Acquisition duration unknown (self.prompts.time_bins undefined); assuming 60 minutes. ")
             duration_ms = 1000*60*60 
         duration = duration_ms / 1000.0 
         alpha = self.scale_activity
@@ -1420,10 +1420,10 @@ class PET_Static_Scan():
         elif self.attenuation_projection is not None: 
             attenuation_projection = self.attenuation_projection.get_subset(subsets_matrix)
         elif self.attenuation is not None:
-            print "Projecting attenuation"
+            print("Projecting attenuation")
             self.attenuation_projection = self.project_attenuation(self.attenuation)
             attenuation_projection = self.attenuation_projection.get_subset(subsets_matrix)
-            print "Done"
+            print("Done")
         else: 
             attenuation_projection = 1.0
         
@@ -1471,9 +1471,9 @@ class PET_Static_Scan():
 
     def brain_crop(self, bin_range=(100,240)):
         if self._use_compression is True: 
-            print "Projection cropping currently only works with uncompressed data. "
-            print "In order to enable cropping, please complete the implementation of PET_Projection.get_subset()"
-            print "Now PET_Projection.get_subset() only works with uncompressed data. "
+            print("Projection cropping currently only works with uncompressed data. ")
+            print("In order to enable cropping, please complete the implementation of PET_Projection.get_subset()")
+            print("Now PET_Projection.get_subset() only works with uncompressed data. ")
             return 
         if hasattr(self, "_cropped"): 
             return 
@@ -1637,7 +1637,7 @@ class PET_Multi2D_Scan(PET_Static_Scan):
             self.set_sensitivity(sensitivity)
         
         for i in range(iterations):
-            print i
+            print(i)
             subsets_matrix = subsets_generator.new_subset(subset_mode, subset_size)
             activity = self.osem_step(activity, subsets_matrix, transformation)
         return activity
@@ -1650,7 +1650,7 @@ class PET_Multi2D_Scan(PET_Static_Scan):
             self.set_sensitivity(1.0)
         
         for i in range(iterations):
-            print i
+            print(i)
             subsets_matrix = None
             activity = self.osem_step(activity, subsets_matrix, transformation)
         return activity
@@ -1748,7 +1748,7 @@ class PET_Multi2D_Scan(PET_Static_Scan):
             pylab.hold(1)
             pylab.plot(sensitivity*scatter,'g') 
         else: 
-            print "quick_inspect uses Pylab to display imaging data. Please install Pylab. "         
+            print("quick_inspect uses Pylab to display imaging data. Please install Pylab. ")         
         
         
         
@@ -1769,7 +1769,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
             vNAV = load_vnav_mprage(motion_files_path) 
             self.__motion_events = vNAV 
             if time_range_ms[1] is not None: 
-                raise "Either time_bins or motion_files_path should be defined, not both. "
+                raise ValueError("Either time_bins or motion_files_path should be defined, not both. ")
             time_range_ms = self.__motion_events.extract_motion_events().sum()   #FIXME: this is not right, implement binning of sinogram according to motion events (this requires modifying the C code that does the binning and passing the right parameters: the list_mode trigger number corresponding to the beginning and end of each sinogram)
 
         print_debug("- Loading dynamic PET data from listmode file "+str(hdr_filename) )
@@ -1889,16 +1889,16 @@ class PET_Dynamic_Scan(PET_Static_Scan):
         self._construct_ilang_model()
     
     def import_prompts(self): 
-        print "Not implemented: should load prompts for multiple time frames and also set self.static.prompts to the integral."
+        print("Not implemented: should load prompts for multiple time frames and also set self.static.prompts to the integral.")
         
     def import_randoms(self): 
-        print "Not implemented: should load randoms for multiple time frames and also set self.static.randoms to the integral."
+        print("Not implemented: should load randoms for multiple time frames and also set self.static.randoms to the integral.")
 
     def export_prompts(self): 
-        print "Not implemented." 
+        print("Not implemented.") 
         
     def export_randoms(self): 
-        print "Not implemented." 
+        print("Not implemented.") 
         
     def get_prompts(self): 
         prompts = []
@@ -1909,11 +1909,11 @@ class PET_Dynamic_Scan(PET_Static_Scan):
     def set_prompts(self, prompts_list): 
         N_time_bins = len(prompts_list)
         if len(self) == N_time_bins: 
-            print "PET_Dynamic_Scan.set_prompts(): Number of sinograms matches current setup; no re-initialization."
+            print("PET_Dynamic_Scan.set_prompts(): Number of sinograms matches current setup; no re-initialization.")
             for t in range(N_time_bins): 
                 self[t].set_prompts(prompts_list[t])                
         else: 
-            print "PET_Dynamic_Scan.set_prompts(): Number of sinograms does not match current setup; re-initialization."
+            print("PET_Dynamic_Scan.set_prompts(): Number of sinograms does not match current setup; re-initialization.")
             self._dynamic = [] 
             total_prompts = prompts_list[0]*0
             for t in range(N_time_bins): 
@@ -1956,11 +1956,11 @@ class PET_Dynamic_Scan(PET_Static_Scan):
     def set_randoms(self,randoms): 
         N_time_bins = len(randoms_list)
         if len(self) == N_time_bins: 
-            print "PET_Dynamic_Scan.set_randoms(): Number of sinograms matches current setup; no re-initialization."
+            print("PET_Dynamic_Scan.set_randoms(): Number of sinograms matches current setup; no re-initialization.")
             for t in range(N_time_bins): 
                 self[t].set_randoms(randoms_list[t])                
         else: 
-            print "PET_Dynamic_Scan.set_randoms(): Number of sinograms does not match current setup; re-initialization."
+            print("PET_Dynamic_Scan.set_randoms(): Number of sinograms does not match current setup; re-initialization.")
             self._dynamic = [] 
             total_randoms = randoms_list[0]*0
             for t in range(N_time_bins): 
@@ -2038,7 +2038,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
         
     def set_activity_shape(self, activity_shape): 
         if not len(activity_shape) == 3: 
-            print "Invalid activity shape"  #FIXME: raise invalid input error
+            print("Invalid activity shape")  #FIXME: raise invalid input error
         else: 
             self.activity_shape = activity_shape
             if hasattr(self,"static"): 
@@ -2049,7 +2049,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
 
     def set_activity_size(self, activity_size): 
         if not len(activity_size) == 3: 
-            print "Invalid activity size"  #FIXME: raise invalid input error
+            print("Invalid activity size")  #FIXME: raise invalid input error
         else: 
             self.activity_size = activity_size
             if hasattr(self,"static"): 
@@ -2060,7 +2060,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
 
     def set_attenuation_shape(self, attenuation_shape): 
         if not len(attenuation_shape) == 3: 
-            print "Invalid attenuation shape"  #FIXME: raise invalid input error
+            print("Invalid attenuation shape")  #FIXME: raise invalid input error
         else: 
             self.attenuation_shape = attenuation_shape
             if hasattr(self,"static"): 
@@ -2071,7 +2071,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
 
     def set_attenuation_size(self, attenuation_size): 
         if not len(attenuation_size) == 3: 
-            print "Invalid attenuation size"  #FIXME: raise invalid input error
+            print("Invalid attenuation size")  #FIXME: raise invalid input error
         else: 
             self.attenuation_size = attenuation_size
             if hasattr(self,"static"): 
@@ -2082,7 +2082,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
 
     def brain_crop(self, bin_range=(100,240)):
         if self._use_compression is True: 
-            print "Cropping currently only works with uncompressed data. "
+            print("Cropping currently only works with uncompressed data. ")
             return 
         self.static.brain_crop(bin_range)
         for frame in range(len(self)):
@@ -2101,7 +2101,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
                 transformation = transformations[frame]
             else: 
                 transformation = None
-            print "Reconstructing frame %d/%d"%(frame,len(self))
+            print(("Reconstructing frame %d/%d"%(frame,len(self))))
             activity_recon = self[frame].osem_reconstruction(iterations=iterations, \
                              activity=activity_init, subset_mode=subset_mode, subset_size=subset_size, transformation=transformation)
             self[frame].activity = activity_recon
@@ -2116,7 +2116,7 @@ class PET_Dynamic_Scan(PET_Static_Scan):
         subsets_generator = SubsetGenerator(self.binning.N_azimuthal, self.binning.N_axial)
         
         for i in range(iterations):
-            print i
+            print(i)
             activity = self.osem_step_4D(activity, subsets_generator, subset_mode, subset_size, transformations)
         return activity
     

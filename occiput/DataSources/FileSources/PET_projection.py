@@ -20,7 +20,7 @@ from numpy import inf, asarray, concatenate, fromfile, maximum, exp, asfortranar
 def import_interfile_projection_data(headerfile='', datafile='',load_time=False):   #FIXME: this should be in the Interfile package
         F = Interfile.load(headerfile)
         
-        if F.has_key('matrix size[1]'): 
+        if 'matrix size[1]' in F: 
             N_planes    = F['matrix size[1]']['value']
             N_axial     = F['matrix size[2]']['value']
             N_sinograms = F['matrix size[3]']['value']        
@@ -42,7 +42,7 @@ def import_interfile_projection_data(headerfile='', datafile='',load_time=False)
                     try: 
                         data = fromfile(datafile3,dtype=float32)
                     except: 
-                        print "Data file not found."
+                        print("Data file not found.")
         else: 
             data = fromfile(datafile,dtype=float32)
         data = data.reshape([N_sinograms,N_axial,N_planes])
@@ -50,7 +50,7 @@ def import_interfile_projection_data(headerfile='', datafile='',load_time=False)
             try: 
                 duration = int32([0,F['image duration']['value']])*1000
             except: 
-                print "Unable to load image (sinogram) duration. This may determine an incorrect scale and use of randoms and scatter when reconstructing. Set .time_bins manually. "
+                print("Unable to load image (sinogram) duration. This may determine an incorrect scale and use of randoms and scatter when reconstructing. Set .time_bins manually. ")
                 duration = int32([0,0])
         else: 
             duration = int32([0,0])

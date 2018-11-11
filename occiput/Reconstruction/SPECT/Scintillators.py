@@ -24,7 +24,7 @@ class BaseScintillatorSPECT():
     def get_parameters(self):
         parameters = {}
         dic = self.__dict__
-        for k in dic.keys(): 
+        for k in list(dic.keys()): 
             if k.startswith('_p_'):
                 parameters[k[3:]]=dic[k]        
         return parameters

@@ -60,9 +60,9 @@ class Transform_Affine(object):
                 X = obj.map_from
             else: 
                 X = "X"
-            print("Affine is incompatible with the given object: composing [%s,%s] \
+            print(("Affine is incompatible with the given object: composing [%s,%s] \
                 with [%s,%s] is not allowed. "\
-                %( self.map_to,self.map_from,self.__space_of_obj(obj),X ))
+                %( self.map_to,self.map_from,self.__space_of_obj(obj),X )))
         data = numpy.dot(self.data,obj.data)
         # return an affine transformation is the input was an affine transformation 
         if isinstance(obj,Transform_Affine): 

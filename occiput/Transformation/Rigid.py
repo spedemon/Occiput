@@ -20,7 +20,7 @@ try:
     from NiftyPy.NiftyReg import gaussian_smoothing
 except: 
     has_NiftyPy = False
-    print "Please install NiftyPy"
+    print("Please install NiftyPy")
 else: 
     has_NiftyPy = True 
 

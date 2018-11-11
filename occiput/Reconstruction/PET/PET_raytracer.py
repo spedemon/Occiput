@@ -47,7 +47,7 @@ class ProjectionParameters():
         elif type(parameters) == dict:  
             self.load_from_dictionary(parameters)        
         elif type(parameters) in [list, tuple]: 
-            if len(parameters) == len(self.default_parameters.keys()): 
+            if len(parameters) == len(list(self.default_parameters.keys())): 
                 self.N_samples                = parameters[0] 
                 self.sample_step              = parameters[1]
                 self.background_activity      = parameters[2]

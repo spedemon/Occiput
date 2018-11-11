@@ -58,7 +58,7 @@ def import_dicom(search_path, extension='IMA'):
     src_paths = glob(search_string)
     stacks = dcmstack.parse_and_stack(src_paths)
     images = []
-    for key in stacks.keys():
+    for key in list(stacks.keys()):
         stack = stacks[key] 
         image = nifti_to_occiput(stack.to_nifti())
         images.append(image) 

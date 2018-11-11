@@ -3,14 +3,14 @@
 # Harvard University, Martinos Center for Biomedical Imaging 
 # Aalto University, Department of Computer Science
 
-import Core
-import Reconstruction
-import Transformation
-import Registration
+from . import Core
+from . import Reconstruction
+from . import Transformation
+from . import Registration
 #import Classification
-import Visualization
-import DataSources
-import global_settings
+from . import Visualization
+from . import DataSources
+from . import global_settings
 
 
 

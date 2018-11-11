@@ -145,7 +145,7 @@ class Motion_Sensor:
                     self._draw_line(axis, t_index, range_y, color, linestyle, label)
 
     def plot_motion(self, save_to_file=None, extract_events_threshold=THRESHOLD_MM, method='box', box_min=BOX_MIN, box_max=BOX_MAX, min_duration=10, line_color=LINE_COLOR):
-        t = range(len(self._tx))
+        t = list(range(len(self._tx)))
 
         # make windows:
         if extract_events_threshold is not None: 
@@ -282,7 +282,7 @@ class Motion_Sensor:
             dist = (corners-corners_t).sum(0)
             mean_displ = numpy.mean(dist)
         else: 
-            raise "Method to compute mean displacement is unknown. "
+            raise ValueError("Method to compute mean displacement is unknown. ")
         return mean_displ
  
     def get_mean_displacement_variation(self, index, method='box', box_min=BOX_MIN, box_max=BOX_MAX):
@@ -305,7 +305,7 @@ class Motion_Sensor:
             #dist = (corners-corners_t).sum(0)
             mean_displ = numpy.mean(dist)
         else: 
-            raise "Method to compute mean displacement is unknown. "
+            raise ValueError("Method to compute mean displacement is unknown. ")
         return mean_displ
 
     def get_mean_displacement_variation_since_time(self, index_new, index_old, method='box', box_min=BOX_MIN, box_max=BOX_MAX):
@@ -325,12 +325,12 @@ class Motion_Sensor:
             #dist = (corners-corners_t).sum(0)
             mean_displ = numpy.mean(dist)
         else: 
-            raise "Method to compute mean displacement is unknown. "
+            raise ValueError("Method to compute mean displacement is unknown. ")
         return mean_displ
 
         
     def extract_motion_events(self, method='box', threshold=THRESHOLD_MM, box_min=BOX_MIN, box_max=BOX_MAX, prune_distance=50):
-        t = range(self.get_n_time_points())
+        t = list(range(self.get_n_time_points()))
         is_event   = numpy.zeros(len(t)-1)
         t_index_old = 0
         for t_index in t[1:]: 
@@ -355,7 +355,7 @@ class Motion_Sensor:
 
 
     def plot_mean_displacement(self, method='box', box_min=BOX_MIN,box_max=BOX_MAX, save_to_file=None, plot_zero=False, extract_events_threshold=THRESHOLD_MM, plot_range=[None,None], line_color=LINE_COLOR, min_duration=10 ): 
-        t = range(self.get_n_time_points())
+        t = list(range(self.get_n_time_points()))
         mean_displ = numpy.zeros(len(t))
         mean_displ_var = numpy.zeros(len(t))
         mean_displ_var_since_event = numpy.zeros(len(t))
@@ -479,7 +479,7 @@ class Motion_Sensor:
         #return fig
 
     def plot_quaternion(self, save_to_file=None, line_color=LINE_COLOR): 
-        t = range(self.get_n_time_points())[1:]
+        t = list(range(self.get_n_time_points()))[1:]
         s = rad_to_deg(numpy.asarray(self._q0))[1:]
         
         fig = plt.figure(6,figsize=(8,4),dpi=200)
@@ -503,7 +503,7 @@ class Motion_Sensor:
             arc[t] = numpy.dot( numpy.transpose(v0), vt ) 
         ax1 = fig.add_subplot(212) 
         ax1.set_title("Arc vs. vNAV frame number") 
-        t = range(self.get_n_time_points()) 
+        t = list(range(self.get_n_time_points())) 
         ax1.plot(t,arc, line_color)
         ax1.grid(True)
         pr0 = arc.min()

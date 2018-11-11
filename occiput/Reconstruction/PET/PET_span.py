@@ -33,7 +33,7 @@ class Michelogram:
 
     def _make(self): 
         if not self._verify_max_ring_difference(): 
-            print "Michelogram: Maximum ring difference is not consistent with span. "
+            print("Michelogram: Maximum ring difference is not consistent with span. ")
         n_sinograms_per_side = (self.max_ring_difference+1-self.span/2)/self.span 
         n_sinograms = n_sinograms_per_side * 2 + 1
         n_planes = zeros([n_sinograms_per_side+1,],dtype=int32)

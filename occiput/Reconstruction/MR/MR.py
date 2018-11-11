@@ -38,7 +38,7 @@ import os
 import h5py 
 
 # Import ilang (inference language; optimisation) 
-from MR_ilang import MR_Static_Gaussian, MR_Dynamic_Gaussian, ProbabilisticGraphicalModel
+from .MR_ilang import MR_Static_Gaussian, MR_Dynamic_Gaussian, ProbabilisticGraphicalModel
 from ilang.Samplers import Sampler 
 
 # Set verbose level
@@ -185,7 +185,7 @@ class MR_Dynamic_Scan:
                     else: 
                         use_frame=False 
                 if use_frame: 
-                    print "time frame: %d / %d "%(framei,n_frames) 
+                    print(("time frame: %d / %d "%(framei,n_frames))) 
                     if framei==0: 
                         image_tr = image 
                     else: 

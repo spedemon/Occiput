@@ -50,7 +50,7 @@ class ColorLookupTable():
         return entry['name']
 
     def has_index(self,index): 
-        return str(index) in self._by_index.keys() 
+        return str(index) in list(self._by_index.keys()) 
 
     def default_rgba(self): 
         if self.has_index(0): 

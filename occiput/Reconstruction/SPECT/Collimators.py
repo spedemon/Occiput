@@ -77,7 +77,7 @@ class BaseCollimatorSPECT():
     def get_parameters(self):
         parameters = {}
         dic = self.__dict__
-        for k in dic.keys(): 
+        for k in list(dic.keys()): 
             if k.startswith('_p_'):
                 parameters[k[3:]]=dic[k]        
         return parameters 
@@ -128,7 +128,7 @@ class HELR(BaseCollimatorSPECT):
         return self._psf 
 
     def _compute_psf(self,energy_kev): 
-        print 1
+        print((1))
         print_low_verbose("Recomputing PSF collimator ..")
         self._need_to_recompute_psf = False
         self._psf = 0

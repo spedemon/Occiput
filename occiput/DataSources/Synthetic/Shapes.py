@@ -11,7 +11,7 @@ try:
     from NiftyPy.NiftyRec import ET_spheres_ring_phantom as __ET_spheres_ring_phantom
 except: 
     has_NiftyPy = False
-    print "Please install NiftyPy"
+    print("Please install NiftyPy")
 else: 
     has_NiftyPy = True
 

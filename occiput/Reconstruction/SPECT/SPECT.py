@@ -84,7 +84,7 @@ class SPECT_Projection():
         N_projections = self.data.shape[2]
         N_x = self.data.shape[0]
         N_y = self.data.shape[1]
-        print "SPECT Projection   [N_projections: %d   N_x: %d   N_y: %d]"%(N_projections,N_x,N_y)
+        print(("SPECT Projection   [N_projections: %d   N_x: %d   N_y: %d]"%(N_projections,N_x,N_y)))
         for i in range( N_projections ): 
                 images.append( self.to_image(data,i,scale=scale,absolute_scale=True) ) 
                 progress_bar.set_percentage(i*100.0/N_projections)                         
@@ -183,7 +183,7 @@ class SPECT_Static_Scan(object):
     def _get_parameters(self):
         parameters = {}
         dic = self.__dict__
-        for k in dic.keys(): 
+        for k in list(dic.keys()): 
             if k.startswith('_p_'):
                 parameters[k[3:]]=dic[k]        
         return parameters 
@@ -389,7 +389,7 @@ class SPECT_Static_Scan(object):
         if psf  is None: 
             psf=self._psf
         if method=="EM": 
-            print "Reconstruction method: EM"
+            print("Reconstruction method: EM")
             for i in range(iterations): 
                 # Subsets: 
                 if subset_size is None:
@@ -418,7 +418,7 @@ class SPECT_Static_Scan(object):
                 #print "Iteration: %d    max act: %f    min act: %f    max proj: %f    min proj: %f    max norm: %f    min norm: %f"%(i, activity.max(), activity.min(), proj.max(), proj.min(), norm.data.max(), norm.data.min() )
             progress_bar.set_percentage(100.0)
         elif method=="LBFGS": 
-            print "Reconstruction method: LBFGS-B"
+            print("Reconstruction method: LBFGS-B")
             bounds = [(None,None)] * activity.size
             for i in range(0,activity.size):
                 bounds[i] = (0, None)
@@ -444,14 +444,14 @@ class SPECT_Static_Scan(object):
                     return 0
                 #if any(activity<0): 
                 #    activity[activity<0]=0
-                print "MIN MAX activity: ",activity.min(), activity.max()
+                print(("MIN MAX activity: ",activity.min(), activity.max()))
                 proj = self.project(activity).data      #FIXME: optionally use subsets 
-                print "MIN MAX proj: ",proj.min(), proj.max()
+                print(("MIN MAX proj: ",proj.min(), proj.max()))
                 log_proj = log(proj+eps)
-                print "MIN MAX log_proj: ",log_proj.min(), log_proj.max()
+                print(("MIN MAX log_proj: ",log_proj.min(), log_proj.max()))
                 log_proj[isinf(log_proj)]=0 
                 d = (-proj.reshape(sinosize) + sinogram.reshape(sinosize) * log_proj.reshape(sinosize)).sum()
-                print "func:",d
+                print(("func:",d))
                 return -float64(d)
 
     def get_gradient_activity(self,activity, activity_size, smoothing=0.0):

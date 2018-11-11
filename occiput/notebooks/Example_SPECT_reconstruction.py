@@ -33,7 +33,7 @@ def demo_SPECT_reconstruction(datatype="phantom"):
     figure(figsize=[18,6])
     subplot(1,2,1); imshow(spect._measurement[:,:,10],cmap='gray');
     subplot(1,2,2); imshow(spect._attenuation[64,:,:],cmap='gray');
-    raw_input("Press Enter to start SPECT reconstruction...") 
+    eval(input("Press Enter to start SPECT reconstruction...")) 
 
     ### 4) Define the geometry of the reconstruction volume 
     spect.set_pixel_size(4.8,4.8)
@@ -54,7 +54,7 @@ def demo_SPECT_reconstruction(datatype="phantom"):
     ### 6) Save the tomogram 
     #activity.save_to_file('../data/spect/spect_01_reconstruction.nii')
 
-    raw_input("Done! Press Enter to quit...") 
+    eval(input("Done! Press Enter to quit...")) 
 
 if __name__ == "__main__": 
     demo_SPECT_reconstruction("phantom")
