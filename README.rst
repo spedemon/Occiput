@@ -9,12 +9,13 @@ Note: an NVidia CUDA-compatible GPU is required.
 
 ``Occiput`` can be utilized with arbitrary scanner geometries. It can be utilized for abstract tomographic 
 reconstruction experiments to develop new algorithms and explore new system geometries, or to connect to real-world scanners, 
-providing production quality image reconstruction with standard algorithms (such as MLEM and OSEM). 
+providing production quality image reconstruction with standard (MLEM, OSEM, Ordinary Poisson OSEM) and advanced algorithms. 
 
-``Occiput`` implements advanced algorithms for motion correction, kinetic imaging, multi-modal reconstruction, respiratory and cardiac gated imaging. 
+``Occiput`` implements algorithms for motion correction (direct motion estimation), kinetic imaging, multi-modal reconstruction, respiratory and cardiac gated imaging. 
 The source code contains Jupyter notebooks with examples. 
 
-A Python extension package ``Occiput_Interface_Biograph_mMR``, implementing the interface to the Siemens Biograph mMR PET-MRI scanner 
+Occiput has a plugin module designed to facilitate the creation of interfaces for real-world PET and SPECT scanners. 
+A Python extension package ``Occiput_Interface_Biograph_mMR``, implementing the interface plugin for the Siemens Biograph mMR PET-MRI scanner 
 is available upon request and following authorization from Siemens. Notebooks containing Biograph_mMR in the title can 
 only be executed after installing the extension package. 
 Please email us at occiput.reconstruction@gmail.com 
